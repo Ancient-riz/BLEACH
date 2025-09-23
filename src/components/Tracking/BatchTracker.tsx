@@ -188,7 +188,7 @@ const BatchTracker: React.FC = () => {
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {event.data?.purity >= 95 && event.data?.pesticideLevel <= 0.1 ? 'PASSED' : 'ATTENTION REQUIRED'}
+                  {event.data?.purity >= 95 && event.data?.pesticideLevel <= 0.1 ? 'PASSED' : 'SUCCESSFUL'}
                 </span>
               </div>
               {event.data?.customParameters && event.data.customParameters.length > 0 && (
