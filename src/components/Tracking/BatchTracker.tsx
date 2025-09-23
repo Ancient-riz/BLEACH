@@ -143,13 +143,15 @@ const BatchTracker: React.FC = () => {
               <div><span className="font-medium text-green-700">Weight:</span> <span className="text-green-900">{event.data?.weight}g</span></div>
               <div><span className="font-medium text-green-700">Quality Grade:</span> <span className="text-green-900">{event.data?.qualityGrade}</span></div>
               <div><span className="font-medium text-green-700">Harvest Date:</span> <span className="text-green-900">{new Date(event.timestamp).toLocaleDateString()}</span></div>
-              <div className="col-span-2"><span className="font-medium text-green-700">Zone:</span> <span className="text-green-900">{event.data?.location?.zone}</span></div>
-              {event.data?.location?.latitude && event.data?.location?.longitude && (
-                <div className="col-span-2">
-                  <span className="font-medium text-green-700">GPS Coordinates:</span> 
-                  <span className="text-green-900 font-mono text-xs"> {parseFloat(event.data.location.latitude).toFixed(6)}, {parseFloat(event.data.location.longitude).toFixed(6)}</span>
-                </div>
-              )}
+              <div className="col-span-2"><span className="font-medium text-green-700">Collection Zone:</span> <span className="text-green-900">{event.data?.location?.zone || 'Not specified'}</span></div>
+              <div className="col-span-2">
+                <span className="font-medium text-green-700">GPS Coordinates:</span> 
+                <span className="text-green-900 font-mono text-xs"> 
+                  {event.data?.location?.latitude && event.data?.location?.longitude 
+                    ? `${parseFloat(event.data.location.latitude).toFixed(6)}, ${parseFloat(event.data.location.longitude).toFixed(6)}`
+                    : 'Not available'}
+                </span>
+              </div>
               {event.data?.weather && (
                 <div className="col-span-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
                   <span className="font-medium text-blue-700 flex items-center mb-2">
@@ -182,15 +184,14 @@ const BatchTracker: React.FC = () => {
               <div><span className="font-medium text-blue-700">Pesticide Level:</span> <span className="text-blue-900">{event.data?.pesticideLevel} ppm</span></div>
               <div><span className="font-medium text-blue-700">Test Method:</span> <span className="text-blue-900">{event.data?.testMethod || 'Standard Laboratory Test'}</span></div>
               <div className="col-span-2"><span className="font-medium text-blue-700">Test Location:</span> <span className="text-blue-900">{event.data?.testLocation?.zone || event.data?.location?.zone || 'Testing Facility'}</span></div>
-              {(event.data?.location?.latitude && event.data?.location?.longitude) || (event.data?.testLocation?.latitude && event.data?.testLocation?.longitude) && (
-                <div className="col-span-2">
-                  <span className="font-medium text-green-700">GPS Coordinates:</span>  
-                  <span className="text-blue-900 font-mono text-xs"> 
-                    {parseFloat((event.data?.location?.latitude || event.data?.testLocation?.latitude)).toFixed(6)}, 
-                    {parseFloat((event.data?.location?.longitude || event.data?.testLocation?.longitude)).toFixed(6)}
-                  </span>
-                </div>
-              )}
+              <div className="col-span-2">
+                <span className="font-medium text-blue-700">GPS Coordinates:</span> 
+                <span className="text-blue-900 font-mono text-xs"> 
+                  {(event.data?.testLocation?.latitude && event.data?.testLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
+                    ? `${parseFloat((event.data?.testLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.testLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
+                    : 'Not available'}
+                </span>
+              </div>
               <div className="col-span-2">
                 <span className="font-medium text-blue-700">Test Status:</span> 
                 <span className={`ml-2 px-2 py-1 rounded-full text-xs font-bold ${
@@ -235,15 +236,14 @@ const BatchTracker: React.FC = () => {
                 <div><span className="font-medium text-purple-700">Yield Efficiency:</span> <span className="text-purple-900">{event.data.yieldPercentage.toFixed(2)}%</span></div>
               )}
               <div className="col-span-2"><span className="font-medium text-purple-700">Processing Location:</span> <span className="text-purple-900">{event.data?.processingLocation?.zone || event.data?.location?.zone || 'Processing Facility'}</span></div>
-              {(event.data?.location?.latitude && event.data?.location?.longitude) || (event.data?.processingLocation?.latitude && event.data?.processingLocation?.longitude) && (
-                <div className="col-span-2">
-                  <span className="font-medium text-purple-700">GPS Coordinates:</span> 
-                  <span className="text-purple-900 font-mono text-xs"> 
-                    {parseFloat((event.data?.location?.latitude || event.data?.processingLocation?.latitude)).toFixed(6)}, 
-                    {parseFloat((event.data?.location?.longitude || event.data?.processingLocation?.longitude)).toFixed(6)}
-                  </span>
-                </div>
-              )}
+              <div className="col-span-2">
+                <span className="font-medium text-purple-700">GPS Coordinates:</span> 
+                <span className="text-purple-900 font-mono text-xs"> 
+                  {(event.data?.processingLocation?.latitude && event.data?.processingLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
+                    ? `${parseFloat((event.data?.processingLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.processingLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
+                    : 'Not available'}
+                </span>
+              </div>
             </div>
           </div>
         );
@@ -268,15 +268,14 @@ const BatchTracker: React.FC = () => {
                 <div><span className="font-medium text-orange-700">Certification ID:</span> <span className="text-orange-900">{event.data.certificationId}</span></div>
               )}
               <div className="col-span-2"><span className="font-medium text-orange-700">Manufacturing Location:</span> <span className="text-orange-900">{event.data?.manufacturingLocation?.zone || event.data?.location?.zone || 'Manufacturing Plant'}</span></div>
-              {(event.data?.location?.latitude && event.data?.location?.longitude) || (event.data?.manufacturingLocation?.latitude && event.data?.manufacturingLocation?.longitude) && (
-                <div className="col-span-2">
-                  <span className="font-medium text-orange-700">GPS Coordinates: </span> 
-                  <span className="text-orange-900 font-mono text-xs"> 
-                    {parseFloat((event.data?.location?.latitude || event.data?.manufacturingLocation?.latitude)).toFixed(6)}, 
-                    {parseFloat((event.data?.location?.longitude || event.data?.manufacturingLocation?.longitude)).toFixed(6)}
-                  </span>
-                </div>
-              )}
+              <div className="col-span-2">
+                <span className="font-medium text-orange-700">GPS Coordinates:</span> 
+                <span className="text-orange-900 font-mono text-xs"> 
+                  {(event.data?.manufacturingLocation?.latitude && event.data?.manufacturingLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
+                    ? `${parseFloat((event.data?.manufacturingLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.manufacturingLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
+                    : 'Not available'}
+                </span>
+              </div>
             </div>
           </div>
         );
