@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Package, Eye, Calendar, User, MapPin, FileText, QrCode, Download, CheckCircle } from 'lucide-react';
 import blockchainService from '../../services/blockchainService';
 import qrService from '../../services/qrService';
+import ipfsService from '../../services/ipfsService'; // Add this import
 
 const BatchTracker: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,12 +33,35 @@ const BatchTracker: React.FC = () => {
 
     try {
       const queryId = skipFormCheck ? searchQuery : searchQuery.trim();
-      const result = await blockchainService.getBatchInfo(queryId);
-      console.log('Batch Info:', result); // Debug: Inspect the response
+      let result = await blockchainService.getBatchInfo(queryId);
+      console.log('Initial Batch Info from Blockchain:', result); // Debug: Inspect initial response
+
       if (!result.batch) {
         throw new Error('No batch data found');
       }
-      setSearchResult(result.batch);
+
+      // Assume result.batch has events array
+      const batch = result.batch;
+
+      // Fetch IPFS metadata for COLLECTION event if ipfsHash is present
+      for (let event of batch.events) {
+        if (event.eventType === 'COLLECTION' && event.ipfsHash) {
+          try {
+            const metadataResponse = await ipfsService.getMetadata(event.ipfsHash);
+            if (metadataResponse.success) {
+              event.data = { ...event.data, ...metadataResponse.data }; // Merge metadata into event.data
+              console.log('Fetched IPFS Metadata for COLLECTION:', metadataResponse.data); // Debug
+            } else {
+              console.warn('Failed to fetch IPFS metadata:', metadataResponse.error);
+            }
+          } catch (ipfsError) {
+            console.error('IPFS fetch error:', ipfsError);
+          }
+        }
+      }
+
+      setSearchResult(batch);
+      console.log('Updated Batch with IPFS Data:', batch); // Final debug log
     } catch (error) {
       console.error('Search error:', error);
       if (!skipFormCheck) {
@@ -265,7 +289,7 @@ const BatchTracker: React.FC = () => {
                             <div className="grid grid-cols-2 gap-2 text-sm">
                               <div><span className="font-medium">Weight:</span> {event.data?.weight ? `${event.data.weight}g` : 'N/A'}</div>
                               <div><span className="font-medium">Quality:</span> {event.data?.qualityGrade || 'N/A'}</div>
-                              <div><span className="font-medium">Zone:</span> {event.data?.location?.zone || 'N/A'}</div>
+                              <div><span className="font-medium">Zone:</span> {event.data?.location?.zone || event.data?.zone || 'N/A'}</div>
                               <div><span className="font-medium">Harvest Date:</span> {event.data?.harvestDate ? new Date(event.data.harvestDate).toLocaleDateString() : 'N/A'}</div>
                               <div><span className="font-medium">Price per Unit:</span> {event.data?.pricePerUnit ? `₹${event.data.pricePerUnit}` : 'N/A'}</div>
                               <div><span className="font-medium">Total Price:</span> {event.data?.totalPrice ? `₹${event.data.totalPrice}` : 'N/A'}</div>
@@ -278,6 +302,11 @@ const BatchTracker: React.FC = () => {
                                   <a href={event.data.images[0]} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
                                     View Image
                                   </a>
+                                </div>
+                              )}
+                              {event.data?.weather && (
+                                <div className="col-span-2">
+                                  <span className="font-medium">Weather:</span> Temp: {event.data.weather.temperature}, Humidity: {event.data.weather.humidity}, Conditions: {event.data.weather.description}
                                 </div>
                               )}
                             </div>
