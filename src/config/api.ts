@@ -20,7 +20,6 @@ export const API_CONFIG = {
     // Quality Testing
     QUALITY: {
       TEST: '/api/quality/test'
-      VALIDATE_ZONE: '/api/collection/location/validate-zone'
     },
     // Processing
     PROCESSING: {
