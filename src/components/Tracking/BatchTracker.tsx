@@ -189,7 +189,7 @@ const BatchTracker: React.FC = () => {
                 <span className="text-blue-900 font-mono text-xs"> 
                   {(event.data?.testLocation?.latitude && event.data?.testLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
                     ? `${parseFloat((event.data?.testLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.testLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
-                    : 'Not available'}
+                    : ''}
                 </span>
               </div>
               <div className="col-span-2">
