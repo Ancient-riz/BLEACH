@@ -181,6 +181,7 @@ const BatchTracker: React.FC = () => {
               <div><span className="font-medium text-blue-700">Purity:</span> <span className="text-blue-900">{event.data?.purity}%</span></div>
               <div><span className="font-medium text-blue-700">Pesticide Level:</span> <span className="text-blue-900">{event.data?.pesticideLevel} ppm</span></div>
               <div><span className="font-medium text-blue-700">Test Method:</span> <span className="text-blue-900">{event.data?.testMethod || 'Standard Laboratory Test'}</span></div>
+              <div className="col-span-2"><span className="font-medium text-blue-700">Test Location:</span> <span className="text-blue-900">{event.data?.testLocation?.zone || event.data?.location?.zone || 'Testing Facility'}</span></div>
               {(event.data?.location?.latitude && event.data?.location?.longitude) || (event.data?.testLocation?.latitude && event.data?.testLocation?.longitude) && (
                 <div className="col-span-2">
                   <span className="font-medium text-blue-700">GPS Coordinates:</span> 
@@ -233,7 +234,7 @@ const BatchTracker: React.FC = () => {
               {event.data?.yieldPercentage && (
                 <div><span className="font-medium text-purple-700">Yield Efficiency:</span> <span className="text-purple-900">{event.data.yieldPercentage.toFixed(2)}%</span></div>
               )}
-              <div className="col-span-2"><span className="font-medium text-purple-700">Processing Location:</span> <span className="text-purple-900">{event.data?.location?.zone || event.data?.processingLocation?.zone || 'Processing Facility'}</span></div>
+              <div className="col-span-2"><span className="font-medium text-purple-700">Processing Location:</span> <span className="text-purple-900">{event.data?.processingLocation?.zone || event.data?.location?.zone || 'Processing Facility'}</span></div>
               {(event.data?.location?.latitude && event.data?.location?.longitude) || (event.data?.processingLocation?.latitude && event.data?.processingLocation?.longitude) && (
                 <div className="col-span-2">
                   <span className="font-medium text-purple-700">GPS Coordinates:</span> 
