@@ -20,7 +20,6 @@ const CollectionForm: React.FC = () => {
   const [filteredHerbs, setFilteredHerbs] = useState(AYURVEDIC_HERBS);
   const [herbSearchTerm, setHerbSearchTerm] = useState('');
   const [showHerbDropdown, setShowHerbDropdown] = useState(false);
-
   const [formData, setFormData] = useState({
     herbSpecies: '',
     weight: '',
@@ -105,13 +104,11 @@ const CollectionForm: React.FC = () => {
       const response = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relative_humidity_2m&timezone=auto`
       );
-      
       if (response.ok) {
         const data = await response.json();
         const currentWeather = data.current_weather;
         const currentHour = new Date().getHours();
         const humidity = data.hourly?.relative_humidity_2m?.[currentHour] || 'N/A';
-        
         setWeather({
           temperature: `${Math.round(currentWeather.temperature)}°C`,
           humidity: `${humidity}%`,
@@ -206,8 +203,22 @@ const CollectionForm: React.FC = () => {
     setError('');
     setSuccess(false);
 
+    // Validate required fields
+    console.log('Form Data:', formData); // Debug: Log form data
+    console.log('Location:', location); // Debug: Log location
+
     if (!location) {
       setError('Location is required for collection');
+      setLoading(false);
+      return;
+    }
+    if (!formData.weight || isNaN(parseFloat(formData.weight))) {
+      setError('Please enter a valid weight');
+      setLoading(false);
+      return;
+    }
+    if (!formData.qualityGrade) {
+      setError('Please select a quality grade');
       setLoading(false);
       return;
     }
@@ -215,7 +226,6 @@ const CollectionForm: React.FC = () => {
     try {
       const batchId = blockchainService.generateBatchId();
       const collectionEventId = blockchainService.generateEventId('COLLECTION');
-
       let imageHash = null;
       if (formData.image) {
         const imageUpload = await ipfsService.uploadFile(formData.image);
@@ -242,7 +252,10 @@ const CollectionForm: React.FC = () => {
         images: imageHash ? [imageHash] : []
       };
 
+      console.log('Collection Data:', collectionData); // Debug: Log collection data
+
       const metadataUpload = await ipfsService.createCollectionMetadata(collectionData);
+      console.log('IPFS Metadata Upload:', metadataUpload); // Debug: Log IPFS result
       if (!metadataUpload.success) {
         console.warn('IPFS upload warning:', metadataUpload.warning || 'Upload failed');
       }
@@ -253,7 +266,6 @@ const CollectionForm: React.FC = () => {
         formData.herbSpecies,
         formData.collectorGroupName
       );
-
       if (!qrResult.success) {
         throw new Error('Failed to generate QR code');
       }
@@ -277,7 +289,6 @@ const CollectionForm: React.FC = () => {
         user?.address || '',
         blockchainData
       );
-
       if (!blockchainResult?.success) {
         throw new Error('Failed to record on Hyperledger Fabric: ' + (blockchainResult?.error || 'Unknown error'));
       }
@@ -330,7 +341,6 @@ const CollectionForm: React.FC = () => {
             <h2 className="text-2xl font-bold text-green-800 mb-2">Collection Successful!</h2>
             <p className="text-green-600">Your herb collection has been recorded on the blockchain</p>
           </div>
-
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 mb-6">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -355,7 +365,6 @@ const CollectionForm: React.FC = () => {
               </div>
             </div>
           </div>
-
           <QRCodeDisplay
             qrData={{
               dataURL: qrResult.qr.dataURL,
@@ -365,7 +374,6 @@ const CollectionForm: React.FC = () => {
             title="Collection QR Code"
             subtitle="Scan to track this batch"
           />
-
           <button
             onClick={handleReset}
             className="w-full mt-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-4 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-medium"
@@ -389,14 +397,12 @@ const CollectionForm: React.FC = () => {
             <p className="text-green-600">Record herb collection details with location validation</p>
           </div>
         </div>
-
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center">
             <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
             <span className="text-red-700">{error}</span>
           </div>
         )}
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -431,7 +437,6 @@ const CollectionForm: React.FC = () => {
                 )}
               </div>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-green-700 mb-2">
                 Weight (grams) *
@@ -448,7 +453,6 @@ const CollectionForm: React.FC = () => {
                 className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-green-700 mb-2">
                 Price per Unit (₹/gram) *
@@ -465,7 +469,6 @@ const CollectionForm: React.FC = () => {
                 className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-green-700 mb-2">
                 Total Price (₹)
@@ -495,7 +498,6 @@ const CollectionForm: React.FC = () => {
                 className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-green-700 mb-2">
                 Harvesting Zone/Location *
@@ -515,7 +517,6 @@ const CollectionForm: React.FC = () => {
                 </p>
               )}
             </div>
-
             <div>
               <label className="block text-sm font-medium text-green-700 mb-2">
                 Quality Grade *
@@ -534,7 +535,6 @@ const CollectionForm: React.FC = () => {
                 <option value="Standard">Standard</option>
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-green-700 mb-2">
                 Collector Group Name *
@@ -550,7 +550,6 @@ const CollectionForm: React.FC = () => {
               />
             </div>
           </div>
-
           {(location || weather) && (
             <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-6 border border-blue-200">
               <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
@@ -597,7 +596,6 @@ const CollectionForm: React.FC = () => {
               </div>
             </div>
           )}
-
           <div>
             <label className="block text-sm font-medium text-green-700 mb-2">
               Collection Image
@@ -625,7 +623,6 @@ const CollectionForm: React.FC = () => {
               )}
             </div>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-green-700 mb-2">
               Additional Notes
@@ -639,7 +636,6 @@ const CollectionForm: React.FC = () => {
               className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
             />
           </div>
-
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -666,7 +662,6 @@ const CollectionForm: React.FC = () => {
               )}
             </div>
           </div>
-
           <button
             type="submit"
             disabled={loading || !location}
