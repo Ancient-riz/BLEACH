@@ -121,7 +121,16 @@ const BatchTracker: React.FC = () => {
     }
   };
 
-  const renderEventDetails = (event: any) => {
+  const renderEventDetails = (event: any, batch: any) => {
+    // Find COLLECTION event to use its coordinates as default
+    const collectionEvent = batch.events?.find((e: any) => e.eventType === 'COLLECTION');
+    const defaultCoordinates = collectionEvent?.data?.location
+      ? {
+          latitude: parseFloat(collectionEvent.data.location.latitude).toFixed(6),
+          longitude: parseFloat(collectionEvent.data.location.longitude).toFixed(6)
+        }
+      : { latitude: 'Not available', longitude: 'Not available' };
+
     const details = [];
     switch (event.eventType) {
       case 'COLLECTION':
@@ -184,7 +193,7 @@ const BatchTracker: React.FC = () => {
                 <span className="text-blue-900 font-mono text-xs">
                   {(event.data?.testLocation?.latitude && event.data?.testLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
                     ? `${parseFloat((event.data?.testLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.testLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
-                    : 'Not available'}
+                    : `${defaultCoordinates.latitude}, ${defaultCoordinates.longitude}`}
                 </span>
               </div>
               <div className="col-span-2">
@@ -235,7 +244,7 @@ const BatchTracker: React.FC = () => {
                 <span className="text-purple-900 font-mono text-xs">
                   {(event.data?.processingLocation?.latitude && event.data?.processingLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
                     ? `${parseFloat((event.data?.processingLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.processingLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
-                    : 'Not available'}
+                    : `${defaultCoordinates.latitude}, ${defaultCoordinates.longitude}`}
                 </span>
               </div>
             </div>
@@ -407,7 +416,7 @@ const BatchTracker: React.FC = () => {
                             <span className="font-mono text-xs">{event.eventId}</span>
                           </div>
                         </div>
-                        {renderEventDetails(event)}
+                        {renderEventDetails(event, searchResult)}
                       </div>
                     </div>
                   </div>
