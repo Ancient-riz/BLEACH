@@ -185,7 +185,7 @@ const BatchTracker: React.FC = () => {
               <div><span className="font-medium text-blue-700">Test Method:</span> <span className="text-blue-900">{event.data?.testMethod || 'Standard Laboratory Test'}</span></div>
               <div className="col-span-2"><span className="font-medium text-blue-700">Test Location:</span> <span className="text-blue-900">{event.data?.testLocation?.zone || event.data?.location?.zone || 'Testing Facility'}</span></div>
               <div className="col-span-2">
-                <span className="font-medium text-blue-700">GPS Coordinates:</span> 
+                 
                 <span className="text-blue-900 font-mono text-xs"> 
                   {(event.data?.testLocation?.latitude && event.data?.testLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
                     ? `${parseFloat((event.data?.testLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.testLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
@@ -237,7 +237,7 @@ const BatchTracker: React.FC = () => {
               )}
               <div className="col-span-2"><span className="font-medium text-purple-700">Processing Location:</span> <span className="text-purple-900">{event.data?.processingLocation?.zone || event.data?.location?.zone || 'Processing Facility'}</span></div>
               <div className="col-span-2">
-                <span className="font-medium text-purple-700">GPS Coordinates:</span> 
+               
                 <span className="text-purple-900 font-mono text-xs"> 
                   {(event.data?.processingLocation?.latitude && event.data?.processingLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
                     ? `${parseFloat((event.data?.processingLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.processingLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
