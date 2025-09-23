@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Search, Package, Eye, Calendar, User, MapPin, FileText, QrCode, Download, CheckCircle } from 'lucide-react';
 import blockchainService from '../../services/blockchainService';
 import qrService from '../../services/qrService';
-import ipfsService from '../../services/ipfsService'; // Add this import
 
 const BatchTracker: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -10,13 +9,16 @@ const BatchTracker: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [downloadingQR, setDownloadingQR] = useState(false);
-
+  
+  // Set up real-time updates
   useEffect(() => {
     const handleDataUpdate = () => {
+      // Refresh current search if we have one
       if (searchQuery && searchResult) {
         handleSearch(new Event('submit') as any, true);
       }
     };
+    
     window.addEventListener('herbionyx-data-update', handleDataUpdate);
     return () => window.removeEventListener('herbionyx-data-update', handleDataUpdate);
   }, [searchQuery, searchResult]);
@@ -32,36 +34,10 @@ const BatchTracker: React.FC = () => {
     if (!skipFormCheck) setSearchResult(null);
 
     try {
+      // Try to get batch info by event ID or batch ID
       const queryId = skipFormCheck ? searchQuery : searchQuery.trim();
-      let result = await blockchainService.getBatchInfo(queryId);
-      console.log('Initial Batch Info from Blockchain:', result); // Debug: Inspect initial response
-
-      if (!result.batch) {
-        throw new Error('No batch data found');
-      }
-
-      // Assume result.batch has events array
-      const batch = result.batch;
-
-      // Fetch IPFS metadata for COLLECTION event if ipfsHash is present
-      for (let event of batch.events) {
-        if (event.eventType === 'COLLECTION' && event.ipfsHash) {
-          try {
-            const metadataResponse = await ipfsService.getMetadata(event.ipfsHash);
-            if (metadataResponse.success) {
-              event.data = { ...event.data, ...metadataResponse.data }; // Merge metadata into event.data
-              console.log('Fetched IPFS Metadata for COLLECTION:', metadataResponse.data); // Debug
-            } else {
-              console.warn('Failed to fetch IPFS metadata:', metadataResponse.error);
-            }
-          } catch (ipfsError) {
-            console.error('IPFS fetch error:', ipfsError);
-          }
-        }
-      }
-
-      setSearchResult(batch);
-      console.log('Updated Batch with IPFS Data:', batch); // Final debug log
+      const result = await blockchainService.getBatchInfo(queryId);
+      setSearchResult(result.batch);
     } catch (error) {
       console.error('Search error:', error);
       if (!skipFormCheck) {
@@ -75,8 +51,11 @@ const BatchTracker: React.FC = () => {
   const handleDownloadQR = async (batch: any) => {
     setDownloadingQR(true);
     try {
+      // Get the latest event to determine current stage
       const latestEvent = batch.events[batch.events.length - 1];
       const currentStage = latestEvent.eventType.replace('_', ' ');
+      
+      // Generate high-quality QR code for the latest event
       const qrResult = await qrService.generatePrintableQR(
         batch.batchId,
         latestEvent.eventId,
@@ -87,6 +66,7 @@ const BatchTracker: React.FC = () => {
         }
       );
 
+      // Create download link
       const link = document.createElement('a');
       link.href = qrResult;
       link.download = `${batch.batchId}-${batch.currentStatus}-QR.png`;
@@ -94,6 +74,7 @@ const BatchTracker: React.FC = () => {
       link.click();
       document.body.removeChild(link);
 
+      // Show success notification
       showSuccessNotification(`QR code downloaded: ${batch.batchId}-${batch.currentStatus}-QR.png`);
     } catch (error) {
       console.error('Error downloading QR:', error);
@@ -162,6 +143,7 @@ const BatchTracker: React.FC = () => {
           </div>
         </div>
 
+        {/* Search Form */}
         <form onSubmit={handleSearch} className="mb-8">
           <div className="flex space-x-4">
             <div className="flex-1">
@@ -193,14 +175,17 @@ const BatchTracker: React.FC = () => {
           </div>
         </form>
 
+        {/* Error Message */}
         {error && (
           <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-red-700">{error}</p>
           </div>
         )}
 
+        {/* Search Results */}
         {searchResult && (
           <div className="space-y-8">
+            {/* Batch Header */}
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -230,6 +215,7 @@ const BatchTracker: React.FC = () => {
                   </button>
                 </div>
               </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
                   <span className="font-medium text-blue-600">Batch ID</span>
@@ -246,6 +232,7 @@ const BatchTracker: React.FC = () => {
               </div>
             </div>
 
+            {/* Events Timeline */}
             <div>
               <h4 className="text-lg font-semibold text-gray-800 mb-6">Supply Chain Journey</h4>
               <div className="space-y-6">
@@ -254,10 +241,12 @@ const BatchTracker: React.FC = () => {
                     {index < searchResult.events.length - 1 && (
                       <div className="absolute left-6 top-16 w-0.5 h-16 bg-gray-200"></div>
                     )}
+                    
                     <div className="flex items-start space-x-4">
                       <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-gray-200 shadow-sm">
                         {getEventTypeIcon(event.eventType)}
                       </div>
+                      
                       <div className="flex-1 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                           <h5 className="font-semibold text-gray-900">{event.eventType.replace('_', ' ')}</h5>
@@ -273,6 +262,7 @@ const BatchTracker: React.FC = () => {
                             )}
                           </div>
                         </div>
+                        
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                           <div className="flex items-center text-sm text-gray-600">
                             <User className="h-4 w-4 mr-2" />
@@ -283,63 +273,49 @@ const BatchTracker: React.FC = () => {
                             <span className="font-mono text-xs">{event.eventId}</span>
                           </div>
                         </div>
+
+                        {/* Event-specific details */}
                         {event.eventType === 'COLLECTION' && (
                           <div className="bg-green-50 rounded-lg p-4">
                             <h6 className="font-medium text-green-800 mb-2">Collection Details</h6>
                             <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div><span className="font-medium">Weight:</span> {event.data?.weight ? `${event.data.weight}g` : 'N/A'}</div>
-                              <div><span className="font-medium">Quality:</span> {event.data?.qualityGrade || 'N/A'}</div>
-                              <div><span className="font-medium">Zone:</span> {event.data?.location?.zone || event.data?.zone || 'N/A'}</div>
-                              <div><span className="font-medium">Harvest Date:</span> {event.data?.harvestDate ? new Date(event.data.harvestDate).toLocaleDateString() : 'N/A'}</div>
-                              <div><span className="font-medium">Price per Unit:</span> {event.data?.pricePerUnit ? `₹${event.data.pricePerUnit}` : 'N/A'}</div>
-                              <div><span className="font-medium">Total Price:</span> {event.data?.totalPrice ? `₹${event.data.totalPrice}` : 'N/A'}</div>
-                              {event.data?.notes && (
-                                <div className="col-span-2"><span className="font-medium">Notes:</span> {event.data.notes}</div>
-                              )}
-                              {event.data?.images?.length > 0 && (
-                                <div className="col-span-2">
-                                  <span className="font-medium">Images:</span>
-                                  <a href={event.data.images[0]} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-                                    View Image
-                                  </a>
-                                </div>
-                              )}
-                              {event.data?.weather && (
-                                <div className="col-span-2">
-                                  <span className="font-medium">Weather:</span> Temp: {event.data.weather.temperature}, Humidity: {event.data.weather.humidity}, Conditions: {event.data.weather.description}
-                                </div>
-                              )}
+                              <div><span className="font-medium">Weight:</span> {event.data?.weight}g</div>
+                              <div><span className="font-medium">Quality:</span> {event.data?.qualityGrade}</div>
+                              <div className="col-span-2"><span className="font-medium">Zone:</span> {event.data?.location?.zone}</div>
                             </div>
                           </div>
                         )}
+
                         {event.eventType === 'QUALITY_TEST' && (
                           <div className="bg-blue-50 rounded-lg p-4">
                             <h6 className="font-medium text-blue-800 mb-2">Test Results</h6>
                             <div className="grid grid-cols-3 gap-2 text-sm">
-                              <div><span className="font-medium">Moisture:</span> {event.data?.moistureContent ? `${event.data.moistureContent}%` : 'N/A'}</div>
-                              <div><span className="font-medium">Purity:</span> {event.data?.purity ? `${event.data.purity}%` : 'N/A'}</div>
-                              <div><span className="font-medium">Pesticide:</span> {event.data?.pesticideLevel ? `${event.data.pesticideLevel} ppm` : 'N/A'}</div>
+                              <div><span className="font-medium">Moisture:</span> {event.data?.moistureContent}%</div>
+                              <div><span className="font-medium">Purity:</span> {event.data?.purity}%</div>
+                              <div><span className="font-medium">Pesticide:</span> {event.data?.pesticideLevel} ppm</div>
                             </div>
                           </div>
                         )}
+
                         {event.eventType === 'PROCESSING' && (
                           <div className="bg-purple-50 rounded-lg p-4">
                             <h6 className="font-medium text-purple-800 mb-2">Processing Details</h6>
                             <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div><span className="font-medium">Method:</span> {event.data?.method || 'N/A'}</div>
-                              <div><span className="font-medium">Yield:</span> {event.data?.yield ? `${event.data.yield}g` : 'N/A'}</div>
+                              <div><span className="font-medium">Method:</span> {event.data?.method}</div>
+                              <div><span className="font-medium">Yield:</span> {event.data?.yield}g</div>
                               {event.data?.temperature && <div><span className="font-medium">Temperature:</span> {event.data.temperature}°C</div>}
                               {event.data?.duration && <div><span className="font-medium">Duration:</span> {event.data.duration}</div>}
                             </div>
                           </div>
                         )}
+
                         {event.eventType === 'MANUFACTURING' && (
                           <div className="bg-orange-50 rounded-lg p-4">
                             <h6 className="font-medium text-orange-800 mb-2">Product Details</h6>
                             <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div><span className="font-medium">Product:</span> {event.data?.productName || 'N/A'}</div>
-                              <div><span className="font-medium">Type:</span> {event.data?.productType || 'N/A'}</div>
-                              <div><span className="font-medium">Quantity:</span> {event.data?.quantity ? `${event.data.quantity} ${event.data.unit || ''}` : 'N/A'}</div>
+                              <div><span className="font-medium">Product:</span> {event.data?.productName}</div>
+                              <div><span className="font-medium">Type:</span> {event.data?.productType}</div>
+                              <div><span className="font-medium">Quantity:</span> {event.data?.quantity} {event.data?.unit}</div>
                               {event.data?.expiryDate && <div><span className="font-medium">Expiry:</span> {event.data.expiryDate}</div>}
                             </div>
                           </div>
@@ -353,6 +329,7 @@ const BatchTracker: React.FC = () => {
           </div>
         )}
 
+        {/* Demo Instructions */}
         {!searchResult && !loading && (
           <div className="text-center py-12">
             <Search className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -361,10 +338,11 @@ const BatchTracker: React.FC = () => {
               Enter a Batch ID or Event ID to view the complete supply chain journey
             </p>
             <div className="bg-blue-50 rounded-lg p-4 max-w-md mx-auto">
-              <p className="text-sm text-blue-700 font-medium mb-2">TRACK IT UP</p>
+              <p className="text-sm text-blue-700 font-medium mb-2">TRACK IT UP </p>
               <div className="space-y-1 text-sm text-blue-600 font-mono">
-                <p>Batch ID example: HERB-123456</p>
-                <p>Event ID example: COLLECTION-789012</p>
+                <p></p>
+                <p></p>
+                <p></p>
               </div>
             </div>
           </div>
