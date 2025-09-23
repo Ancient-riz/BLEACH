@@ -12,7 +12,6 @@ import {
   Factory, 
   TestTube, 
   Package,
-  Star,
   CheckCircle,
   AlertTriangle,
   Globe,
@@ -30,14 +29,12 @@ const ConsumerView: React.FC = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Set up real-time updates
   useEffect(() => {
     const handleDataUpdate = () => {
       if (qrInput && productInfo) {
-        handleQRScan(new Event('submitpubl:submit') as any, true);
+        handleQRScan(new Event('submit') as any, true);
       }
     };
-    
     window.addEventListener('herbionyx-data-update', handleDataUpdate);
     return () => window.removeEventListener('herbionyx-data-update', handleDataUpdate);
   }, [qrInput, productInfo]);
@@ -92,17 +89,20 @@ const ConsumerView: React.FC = () => {
       const batch = data.batch;
       const events = batch.events || [];
       
-      // Mock coordinates for QUALITY_TEST, PROCESSING, and MANUFACTURING
+      // Mock coordinates and additional manufacturing data
       const enrichedEvents = events.map(event => {
         let mockLocation = event.data?.location || {};
+        let mockData = event.data || {};
         if (event.eventType === 'QUALITY_TEST') {
           mockLocation = { ...mockLocation, latitude: '23.123456', longitude: '88.654321', zone: event.data?.location?.zone || 'Testing Laboratory Facility' };
         } else if (event.eventType === 'PROCESSING') {
           mockLocation = { ...mockLocation, latitude: '23.789012', longitude: '88.987654', zone: event.data?.location?.zone || 'Processing Unit Facility' };
+          mockData = { ...mockData, method: event.data?.method || 'Solvent Extraction', temperature: event.data?.temperature || 10000, yieldPercentage: event.data?.yieldPercentage || 100 };
         } else if (event.eventType === 'MANUFACTURING') {
           mockLocation = { ...mockLocation, latitude: '24.456789', longitude: '89.123456', zone: event.data?.location?.zone || 'Manufacturing Plant Facility' };
+          mockData = { ...mockData, method: event.data?.method || 'Standardized Packaging', quantity: event.data?.quantity || 500, unit: event.data?.unit || 'Capsules', productName: event.data?.productName || 'Talispatra Extract' };
         }
-        return { ...event, data: { ...event.data, location: mockLocation } };
+        return { ...event, data: { ...mockData, location: mockLocation } };
       });
 
       const productInfo = {
@@ -133,7 +133,7 @@ const ConsumerView: React.FC = () => {
   };
 
   const getProductNameFromEvents = (events: any[]) => {
-    const mfgEvent = events.find(e => e.eventType === ' Diffusion');
+    const mfgEvent = events.find(e => e.eventType === 'MANUFACTURING');
     const collectionEvent = events.find(e => e.eventType === 'COLLECTION');
     return mfgEvent?.data?.productName || `${collectionEvent?.data?.herbSpecies} Product` || 'Herbal Product';
   };
@@ -231,10 +231,14 @@ const ConsumerView: React.FC = () => {
       processingMethod: processingEvent?.data?.method || 'Not specified',
       processingLocation: processingEvent?.data?.location?.zone || 'Processing Unit Facility',
       processingCoordinates: getCoordinatesFromEvent(processingEvent),
-      manufacturingLocation: mfgEvent?.data?.manufacturingLocation?.zone || 'Manufacturing Plant Facility',
+      processingTemperature: processingEvent?.data?.temperature ? `${processingEvent.data.temperature}°C` : 'Not specified',
+      processingYieldEfficiency: processingEvent?.data?.yieldPercentage ? `${processingEvent.data.yieldPercentage.toFixed(1)}%` : 'Not available',
+      manufacturingMethod: mfgEvent?.data?.method || 'Not specified',
+      manufacturingLocation: mfgEvent?.data?.location?.zone || 'Manufacturing Plant Facility',
       manufacturingCoordinates: getCoordinatesFromEvent(mfgEvent),
-      yieldEfficiency: processingEvent?.data?.yieldPercentage ? `${processingEvent.data.yieldPercentage.toFixed(1)}%` : 'Not available',
-      processingTemperature: processingEvent?.data?.temperature ? `${processingEvent.data.temperature}°C` : 'Not specified'
+      manufacturingQuantity: mfgEvent?.data?.quantity ? `${mfgEvent.data.quantity}` : 'Not specified',
+      manufacturingUnit: mfgEvent?.data?.unit || 'Not specified',
+      manufacturingProductName: mfgEvent?.data?.productName || 'Not specified'
     };
   };
 
@@ -321,7 +325,6 @@ const ConsumerView: React.FC = () => {
           </div>
         </div>
 
-        {/* QR Scanner Form */}
         <form onSubmit={handleQRScan} className="mb-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
@@ -372,7 +375,6 @@ const ConsumerView: React.FC = () => {
           />
         </form>
 
-        {/* Uploaded Image Preview */}
         {uploadedImage && (
           <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-center space-x-4">
@@ -385,7 +387,6 @@ const ConsumerView: React.FC = () => {
           </div>
         )}
 
-        {/* Error Message */}
         {error && (
           <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -393,10 +394,8 @@ const ConsumerView: React.FC = () => {
           </div>
         )}
 
-        {/* Product Information */}
         {productInfo && (
           <div className="space-y-8">
-            {/* Product Header */}
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-8 border border-emerald-200">
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -431,7 +430,6 @@ const ConsumerView: React.FC = () => {
               </div>
             </div>
 
-            {/* Origin Details */}
             {productInfo.originDetails && (
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h4 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
@@ -463,7 +461,6 @@ const ConsumerView: React.FC = () => {
               </div>
             )}
 
-            {/* Environmental Conditions */}
             {productInfo.environmentalData && (
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h4 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
@@ -495,7 +492,6 @@ const ConsumerView: React.FC = () => {
               </div>
             )}
 
-            {/* Quality Metrics */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h4 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
                 <TestTube className="h-6 w-6 mr-3 text-blue-600" />
@@ -550,7 +546,6 @@ const ConsumerView: React.FC = () => {
               )}
             </div>
 
-            {/* Processing & Compliance */}
             {productInfo.complianceInfo && (
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h4 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
@@ -562,7 +557,7 @@ const ConsumerView: React.FC = () => {
                     <h5 className="font-semibold text-purple-800 mb-2">Processing Details</h5>
                     <p className="text-purple-900">Method: {productInfo.complianceInfo.processingMethod}</p>
                     <p className="text-purple-900">Temperature: {productInfo.complianceInfo.processingTemperature}</p>
-                    <p className="text-purple-900">Yield Efficiency: {productInfo.complianceInfo.yieldEfficiency}</p>
+                    <p className="text-purple-900">Yield Efficiency: {productInfo.complianceInfo.processingYieldEfficiency}</p>
                     <p className="text-purple-900">Location: {productInfo.complianceInfo.processingLocation}</p>
                     {productInfo.complianceInfo.processingCoordinates && (
                       <p className="text-purple-700 text-sm font-mono">
@@ -572,6 +567,9 @@ const ConsumerView: React.FC = () => {
                   </div>
                   <div className="bg-orange-50 rounded-lg p-4">
                     <h5 className="font-semibold text-orange-800 mb-2">Manufacturing Details</h5>
+                    <p className="text-orange-900">Method: {productInfo.complianceInfo.manufacturingMethod}</p>
+                    <p className="text-orange-900">Quantity: {productInfo.complianceInfo.manufacturingQuantity} {productInfo.complianceInfo.manufacturingUnit}</p>
+                    <p className="text-orange-900">Product: {productInfo.complianceInfo.manufacturingProductName}</p>
                     <p className="text-orange-900">Location: {productInfo.complianceInfo.manufacturingLocation}</p>
                     {productInfo.complianceInfo.manufacturingCoordinates && (
                       <p className="text-orange-700 text-sm font-mono">
@@ -583,7 +581,6 @@ const ConsumerView: React.FC = () => {
               </div>
             )}
 
-            {/* Certifications */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h4 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
                 <Award className="h-6 w-6 mr-3 text-yellow-600" />
@@ -602,7 +599,6 @@ const ConsumerView: React.FC = () => {
               </div>
             </div>
 
-            {/* Complete Supply Chain Journey */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h4 className="text-xl font-semibold text-gray-800 mb-6">Complete Supply Chain Journey</h4>
               <div className="space-y-6">
@@ -656,7 +652,6 @@ const ConsumerView: React.FC = () => {
           </div>
         )}
 
-        {/* Demo Instructions */}
         {!productInfo && !loading && (
           <div className="text-center py-12">
             <QrCode className="h-20 w-20 text-gray-400 mx-auto mb-6" />
