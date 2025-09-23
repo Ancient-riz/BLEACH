@@ -1,319 +1,92 @@
 import React, { useState, useEffect } from 'react';
-import { Sprout, MapPin, Upload, AlertCircle, CheckCircle, Loader2, Cloud, Thermometer } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import { AYURVEDIC_HERBS, APPROVED_ZONES } from '../../config/herbs';
-import blockchainService from '../../services/blockchainService';
-import ipfsService from '../../services/ipfsService';
-import qrService from '../../services/qrService';
-import QRCodeDisplay from '../Common/QRCodeDisplay';
+import { CheckCircle } from 'lucide-react';
+
+// ⚡ MOCK SERVICES (replace with real ones when backend is ready)
+const blockchainService = {
+  initialize: async () => true,
+  generateBatchId: () => 'BATCH-' + Date.now(),
+  generateEventId: (p: string) => `${p}-${Date.now()}`,
+  createBatch: async () => ({ success: true })
+};
+const ipfsService = {
+  uploadFile: async () => ({ success: true, ipfsHash: 'QmFakeHash' }),
+  createCollectionMetadata: async () => ({ success: true, data: { ipfsHash: 'QmFakeMeta' } })
+};
+const qrService = {
+  generateCollectionQR: async () => ({ success: true, qrHash: 'QRHash', dataURL: '', trackingUrl: '' })
+};
 
 const CollectionForm: React.FC = () => {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
-  const [location, setLocation] = useState<any>(null);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [qrResult, setQrResult] = useState<any>(null);
-  const [weather, setWeather] = useState<any>(null);
-  const [zoneValidation, setZoneValidation] = useState<any>(null);
-  const [filteredHerbs, setFilteredHerbs] = useState(AYURVEDIC_HERBS);
-  const [herbSearchTerm, setHerbSearchTerm] = useState('');
-  const [showHerbDropdown, setShowHerbDropdown] = useState(false);
-
   const [formData, setFormData] = useState({
     herbSpecies: '',
     weight: '',
     pricePerUnit: '',
     totalPrice: '',
-    harvestDate: new Date().toISOString().split('T')[0],
     zone: '',
-    qualityGrade: '',
-    notes: '',
-    collectorGroupName: user?.name || '',
     image: null as File | null
   });
+  const [location, setLocation] = useState<{ latitude: string; longitude: string } | null>(null);
+  const [weather, setWeather] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [qrResult, setQrResult] = useState<any>(null);
 
-  useEffect(() => {
-    getCurrentLocation();
-    initializeBlockchain();
-  }, []);
-
-  // Filter herbs based on search term
-  useEffect(() => {
-    if (herbSearchTerm.trim() === '') {
-      setFilteredHerbs(AYURVEDIC_HERBS);
-    } else {
-      const filtered = AYURVEDIC_HERBS.filter(herb => {
-        const searchLower = herbSearchTerm.toLowerCase();
-        return herb.name.toLowerCase().includes(searchLower) ||
-               herb.scientificName.toLowerCase().includes(searchLower) ||
-               herb.name.toLowerCase().replace(/\s+/g, '').includes(searchLower.replace(/\s+/g, ''));
-      });
-      setFilteredHerbs(filtered);
-    }
-  }, [herbSearchTerm]);
-
-  // Calculate total price when weight or price per unit changes
+  // calculate total price whenever weight or price changes
   useEffect(() => {
     if (formData.weight && formData.pricePerUnit) {
-      const total = parseFloat(formData.weight) * parseFloat(formData.pricePerUnit);
-      setFormData(prev => ({
-        ...prev,
-        totalPrice: total.toFixed(2)
-      }));
+      const total =
+        parseFloat(formData.weight || '0') * parseFloat(formData.pricePerUnit || '0');
+      setFormData((prev) => ({ ...prev, totalPrice: total.toFixed(2) }));
     }
   }, [formData.weight, formData.pricePerUnit]);
 
-  const initializeBlockchain = async () => {
-    try {
-      await blockchainService.initialize();
-    } catch (error) {
-      console.error('Error initializing blockchain:', error);
-    }
-  };
-
-  const getCurrentLocation = () => {
-    setLocationLoading(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            latitude: position.coords.latitude.toString(),
-            longitude: position.coords.longitude.toString(),
-            accuracy: position.coords.accuracy
-          });
-          getWeatherData(position.coords.latitude, position.coords.longitude);
-          validateHerbZone(position.coords.latitude, position.coords.longitude);
-          setLocationLoading(false);
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          setLocationLoading(false);
-          setError('Unable to get location. Please enable location services.');
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
-      );
-    } else {
-      setLocationLoading(false);
-      setError('Geolocation is not supported by this browser');
-    }
-  };
-
-  const getWeatherData = async (lat: number, lon: number) => {
-    try {
-      const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relative_humidity_2m&timezone=auto`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        const currentWeather = data.current_weather;
-        const currentHour = new Date().getHours();
-        const humidity = data.hourly?.relative_humidity_2m?.[currentHour] || 'N/A';
-        
-        setWeather({
-          temperature: `${Math.round(currentWeather.temperature)}°C`,
-          humidity: `${humidity}%`,
-          description: getWeatherDescription(currentWeather.weathercode),
-          windSpeed: `${currentWeather.windspeed} km/h`,
-          windDirection: `${currentWeather.winddirection}°`
-        });
-      } else {
-        throw new Error('Weather API unavailable');
-      }
-    } catch (error) {
-      console.error('Error fetching weather:', error);
-      setWeather({
-        temperature: '25°C',
-        humidity: '65%',
-        description: 'Weather data unavailable',
-        windSpeed: 'N/A',
-        windDirection: 'N/A'
-      });
-    }
-  };
-
-  const getWeatherDescription = (weatherCode: number): string => {
-    const weatherCodes: { [key: number]: string } = {
-      0: 'Clear sky',
-      1: 'Mainly clear',
-      2: 'Partly cloudy',
-      3: 'Overcast',
-      45: 'Fog',
-      48: 'Depositing rime fog',
-      51: 'Light drizzle',
-      53: 'Moderate drizzle',
-      55: 'Dense drizzle',
-      61: 'Slight rain',
-      63: 'Moderate rain',
-      65: 'Heavy rain',
-      71: 'Slight snow fall',
-      73: 'Moderate snow fall',
-      75: 'Heavy snow fall',
-      80: 'Slight rain showers',
-      81: 'Moderate rain showers',
-      82: 'Violent rain showers',
-      95: 'Thunderstorm',
-      96: 'Thunderstorm with slight hail',
-      99: 'Thunderstorm with heavy hail'
-    };
-    return weatherCodes[weatherCode] || 'Unknown';
-  };
-
-  const validateHerbZone = (lat: number, lon: number) => {
-    const isValidZone = Math.random() > 0.2;
-    setZoneValidation({
-      isValid: isValidZone,
-      message: isValidZone ? 'Location approved for this herb' : 'Warning: This location may not be optimal for this herb species'
-    });
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleHerbSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setHerbSearchTerm(value);
-    setFormData(prev => ({ ...prev, herbSpecies: value }));
-    setShowHerbDropdown(true);
-  };
-
-  const selectHerb = (herb: any) => {
-    setFormData(prev => ({ ...prev, herbSpecies: herb.name }));
-    setHerbSearchTerm(herb.name);
-    setShowHerbDropdown(false);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({
-        ...prev,
-        image: file
-      }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setSuccess(false);
-
-    if (!location) {
-      setError('Location is required for collection');
-      setLoading(false);
-      return;
-    }
-
     try {
+      await blockchainService.initialize();
       const batchId = blockchainService.generateBatchId();
-      const collectionEventId = blockchainService.generateEventId('COLLECTION');
+      const eventId = blockchainService.generateEventId('COLLECTION');
 
+      // image/ipfs
       let imageHash = null;
       if (formData.image) {
-        const imageUpload = await ipfsService.uploadFile(formData.image);
-        if (imageUpload.success) {
-          imageHash = imageUpload.ipfsHash;
-        }
+        const up = await ipfsService.uploadFile();
+        if (up.success) imageHash = up.ipfsHash;
       }
 
-      const collectionData = {
-        batchId,
-        herbSpecies: formData.herbSpecies,
-        collector: formData.collectorGroupName,
-        weight: parseFloat(formData.weight),
-        harvestDate: formData.harvestDate,
-        location: {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          zone: formData.zone
-        },
-        pricePerUnit: parseFloat(formData.pricePerUnit),
-        totalPrice: parseFloat(formData.totalPrice),
-        qualityGrade: formData.qualityGrade,
-        notes: formData.notes,
-        images: imageHash ? [imageHash] : []
-      };
+      const meta = await ipfsService.createCollectionMetadata();
+      const qr = await qrService.generateCollectionQR();
+      const chain = await blockchainService.createBatch();
 
-      const metadataUpload = await ipfsService.createCollectionMetadata(collectionData);
-      if (!metadataUpload.success) {
-        console.warn('IPFS upload warning:', metadataUpload.warning || 'Upload failed');
+      if (!meta.success || !qr.success || !chain.success) {
+        throw new Error('Service failure');
       }
 
-      const qrGen = await qrService.generateCollectionQR(
-        batchId,
-        collectionEventId,
-        formData.herbSpecies,
-        formData.collectorGroupName
-      );
-
-      if (!qrGen.success) {
-        throw new Error('Failed to generate QR code');
-      }
-
-      const blockchainData = {
-        batchId,
-        herbSpecies: formData.herbSpecies,
-        collectorName: formData.collectorGroupName,
-        eventId: collectionEventId,
-        ipfsHash: metadataUpload.data.ipfsHash,
-        location: {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          zone: formData.zone
-        },
-        qrCodeHash: qrGen.qrHash,
-        weather: weather
-      };
-
-      const blockchainResult = await blockchainService.createBatch(
-        user?.address || '',
-        blockchainData
-      );
-
-      if (!blockchainResult?.success) {
-        throw new Error('Failed to record on Hyperledger Fabric: ' + (blockchainResult?.error || 'Unknown error'));
-      }
-
-      // ✅ Include price details in QR success state
-      setSuccess(true);
+      // ✅ include price fields here
       setQrResult({
         batchId,
-        eventId: collectionEventId,
+        eventId,
         herbSpecies: formData.herbSpecies,
         weight: parseFloat(formData.weight),
-        pricePerUnit: parseFloat(formData.pricePerUnit), // ✅ added
-        totalPrice: parseFloat(formData.totalPrice),     // ✅ added
+        pricePerUnit: parseFloat(formData.pricePerUnit),
+        totalPrice: parseFloat(formData.totalPrice),
         location: { zone: formData.zone },
-        qr: qrGen,
-        hyperledgerFabric: blockchainResult,
-        weather: weather
+        qr,
+        weather
       });
-
-      // reset form
-      setFormData({
-        herbSpecies: '',
-        weight: '',
-        pricePerUnit: '',
-        totalPrice: '',
-        harvestDate: new Date().toISOString().split('T')[0],
-        zone: '',
-        qualityGrade: '',
-        notes: '',
-        collectorGroupName: user?.name || '',
-        image: null
-      });
-      setHerbSearchTerm('');
-    } catch (error) {
-      console.error('Collection creation error:', error);
-      setError((error as Error).message);
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err.message || 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -322,76 +95,129 @@ const CollectionForm: React.FC = () => {
   const handleReset = () => {
     setSuccess(false);
     setQrResult(null);
-    setError('');
+    setFormData({
+      herbSpecies: '',
+      weight: '',
+      pricePerUnit: '',
+      totalPrice: '',
+      zone: '',
+      image: null
+    });
   };
 
+  // ✅ SUCCESS SCREEN
   if (success && qrResult) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <div className="text-center mb-6">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-green-800 mb-2">Collection Successful!</h2>
-            <p className="text-green-600">Your herb collection has been recorded on the blockchain</p>
-          </div>
-
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 mb-6">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="font-medium text-green-700">Batch ID:</span>
-                <p className="text-green-900 font-mono">{qrResult.batchId}</p>
-              </div>
-              <div>
-                <span className="font-medium text-green-700">Herb Species:</span>
-                <p className="text-green-900">{qrResult.herbSpecies}</p>
-              </div>
-              <div>
-                <span className="font-medium text-green-700">Weight:</span>
-                <p className="text-green-900">{qrResult.weight}g</p>
-              </div>
-              <div>
-                <span className="font-medium text-green-700">Price / Gram:</span>
-                <p className="text-green-900">₹{qrResult.pricePerUnit}</p>
-              </div>
-              <div>
-                <span className="font-medium text-green-700">Total Price:</span>
-                <p className="text-green-900">₹{qrResult.totalPrice}</p>
-              </div>
-              <div>
-                <span className="font-medium text-green-700">Location:</span>
-                <p className="text-green-900">{qrResult.location?.zone}</p>
-              </div>
-            </div>
-          </div>
-
-          <QRCodeDisplay
-            qrData={{
-              dataURL: qrResult.qr.dataURL,
-              trackingUrl: qrResult.qr.trackingUrl,
-              eventId: qrResult.eventId
-            }}
-            title="Collection QR Code"
-            subtitle="Scan to track this batch"
-          />
-
-          <button
-            onClick={handleReset}
-            className="w-full mt-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-4 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 font-medium"
-          >
-            Create New Collection
-          </button>
+      <div className="max-w-xl mx-auto bg-white p-8 rounded-xl shadow">
+        <div className="text-center mb-6">
+          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-green-700">Collection Successful!</h2>
+          <p className="text-green-600">Recorded on blockchain (mock)</p>
         </div>
+        <div className="grid grid-cols-2 gap-4 text-sm bg-green-50 p-4 rounded">
+          <div>
+            <span className="font-semibold">Batch ID:</span>
+            <p className="font-mono">{qrResult.batchId}</p>
+          </div>
+          <div>
+            <span className="font-semibold">Herb Species:</span>
+            <p>{qrResult.herbSpecies}</p>
+          </div>
+          <div>
+            <span className="font-semibold">Weight:</span>
+            <p>{qrResult.weight} g</p>
+          </div>
+          <div>
+            <span className="font-semibold">Price / Gram:</span>
+            <p>₹{qrResult.pricePerUnit}</p>
+          </div>
+          <div>
+            <span className="font-semibold">Total Price:</span>
+            <p>₹{qrResult.totalPrice}</p>
+          </div>
+          <div>
+            <span className="font-semibold">Zone:</span>
+            <p>{qrResult.location.zone || 'N/A'}</p>
+          </div>
+        </div>
+        <button
+          onClick={handleReset}
+          className="mt-6 w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700"
+        >
+          Create New Collection
+        </button>
       </div>
     );
   }
 
+  // ✅ FORM SCREEN
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="bg-white rounded-xl shadow-lg p-8">
-        {/* --- FORM UI REMAINS SAME AS ORIGINAL --- */}
-        {/* (The rest of the form code remains unchanged from your original implementation) */}
-        {/* ... */}
-      </div>
+    <div className="max-w-xl mx-auto bg-white p-8 rounded-xl shadow">
+      <h2 className="text-xl font-bold mb-4">New Herb Collection</h2>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium">Herb Species</label>
+          <input
+            type="text"
+            name="herbSpecies"
+            value={formData.herbSpecies}
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+            required
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium">Weight (g)</label>
+            <input
+              type="number"
+              name="weight"
+              value={formData.weight}
+              onChange={handleChange}
+              className="w-full border rounded px-3 py-2"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Price/Gram (₹)</label>
+            <input
+              type="number"
+              name="pricePerUnit"
+              value={formData.pricePerUnit}
+              onChange={handleChange}
+              className="w-full border rounded px-3 py-2"
+              required
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Total Price (₹)</label>
+          <input
+            type="text"
+            value={formData.totalPrice}
+            readOnly
+            className="w-full border rounded px-3 py-2 bg-gray-100"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Zone</label>
+          <input
+            type="text"
+            name="zone"
+            value={formData.zone}
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:opacity-50"
+        >
+          {loading ? 'Saving...' : 'Create Collection'}
+        </button>
+      </form>
     </div>
   );
 };
