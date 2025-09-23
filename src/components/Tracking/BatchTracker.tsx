@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Package, Calendar, User, QrCode, Download, CheckCircle, Thermometer, TestTube, Factory, Cpu } from 'lucide-react';
+import { Search, Package, Calendar, User, QrCode, Download, Thermometer, TestTube, Factory, Cpu } from 'lucide-react';
 import blockchainService from '../../services/blockchainService';
 import qrService from '../../services/qrService';
 
@@ -32,9 +32,9 @@ const BatchTracker: React.FC = () => {
     try {
       const queryId = skipFormCheck ? searchQuery : searchQuery.trim();
       const result = await blockchainService.getBatchInfo(queryId);
-      console.log('Batch Info Result:', JSON.stringify(result, null, 2)); // Debug: Log formatted result
+      console.log('Batch Info Result:', JSON.stringify(result, null, 2));
       const collectionEvent = result.batch.events?.find((event: any) => event.eventType === 'COLLECTION');
-      console.log('Collection Event Data:', collectionEvent?.data); // Debug: Log COLLECTION event data
+      console.log('Collection Event Data:', collectionEvent?.data);
       setSearchResult(result.batch);
     } catch (error) {
       console.error('Search error:', error);
@@ -130,7 +130,6 @@ const BatchTracker: React.FC = () => {
           longitude: parseFloat(collectionEvent.data.location.longitude).toFixed(6)
         }
       : { latitude: 'Not available', longitude: 'Not available' };
-
     const details = [];
     switch (event.eventType) {
       case 'COLLECTION':
@@ -174,6 +173,12 @@ const BatchTracker: React.FC = () => {
               {event.data?.notes && (
                 <div className="col-span-2"><span className="font-medium text-green-700">Notes:</span> <span className="text-green-900">{event.data.notes}</span></div>
               )}
+              <div className="col-span-2">
+                <span className="font-medium text-green-700"></span>
+                <span className="ml-2 px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                  COMPLETED
+                </span>
+              </div>
             </div>
           </div>
         );
@@ -247,6 +252,12 @@ const BatchTracker: React.FC = () => {
                     : `${defaultCoordinates.latitude}, ${defaultCoordinates.longitude}`}
                 </span>
               </div>
+              <div className="col-span-2">
+                <span className="font-medium text-purple-700"></span>
+                <span className="ml-2 px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                  COMPLETED
+                </span>
+              </div>
             </div>
           </div>
         );
@@ -276,6 +287,12 @@ const BatchTracker: React.FC = () => {
                   {(event.data?.manufacturingLocation?.latitude && event.data?.manufacturingLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
                     ? `${parseFloat((event.data?.manufacturingLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.manufacturingLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
                     : 'Not available'}
+                </span>
+              </div>
+              <div className="col-span-2">
+                <span className="font-medium text-orange-700"></span>
+                <span className="ml-2 px-2 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800">
+                  COMPLETED
                 </span>
               </div>
             </div>
