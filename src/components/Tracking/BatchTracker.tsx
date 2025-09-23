@@ -197,7 +197,7 @@ const BatchTracker: React.FC = () => {
                 </span>
               </div>
               <div className="col-span-2">
-                <span className="font-medium text-blue-700">Test Status:</span>
+                <span className="font-medium text-blue-700"></span>
                 <span className={`ml-2 px-2 py-1 rounded-full text-xs font-bold ${
                   event.data?.purity >= 95 && event.data?.pesticideLevel <= 0.1
                     ? 'bg-green-100 text-green-800'
