@@ -402,53 +402,6 @@ const BatchTracker: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Event Summary */}
-                        {event.eventType === 'COLLECTION' && (
-                          <div className="bg-green-50 rounded-lg p-4">
-                            <h6 className="font-medium text-green-800 mb-2">Collection Summary</h6>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div><span className="font-medium">Weight:</span> {event.data?.weight}g</div>
-                              <div><span className="font-medium">Quality:</span> {event.data?.qualityGrade}</div>
-                              <div className="col-span-2"><span className="font-medium">Zone:</span> {event.data?.location?.zone}</div>
-                            </div>
-                          </div>
-                        )}
-
-                        {event.eventType === 'QUALITY_TEST' && (
-                          <div className="bg-blue-50 rounded-lg p-4">
-                            <h6 className="font-medium text-blue-800 mb-2">Test Summary</h6>
-                            <div className="grid grid-cols-3 gap-2 text-sm">
-                              <div><span className="font-medium">Moisture:</span> {event.data?.moistureContent}%</div>
-                              <div><span className="font-medium">Purity:</span> {event.data?.purity}%</div>
-                              <div><span className="font-medium">Pesticide:</span> {event.data?.pesticideLevel} ppm</div>
-                            </div>
-                          </div>
-                        )}
-
-                        {event.eventType === 'PROCESSING' && (
-                          <div className="bg-purple-50 rounded-lg p-4">
-                            <h6 className="font-medium text-purple-800 mb-2">Processing Summary</h6>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div><span className="font-medium">Method:</span> {event.data?.method}</div>
-                              <div><span className="font-medium">Yield:</span> {event.data?.yield}g</div>
-                              {event.data?.temperature && <div><span className="font-medium">Temperature:</span> {event.data.temperature}°C</div>}
-                              {event.data?.duration && <div><span className="font-medium">Duration:</span> {event.data.duration}</div>}
-                            </div>
-                          </div>
-                        )}
-
-                        {event.eventType === 'MANUFACTURING' && (
-                          <div className="bg-orange-50 rounded-lg p-4">
-                            <h6 className="font-medium text-orange-800 mb-2">Product Summary</h6>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div><span className="font-medium">Product:</span> {event.data?.productName}</div>
-                              <div><span className="font-medium">Type:</span> {event.data?.productType}</div>
-                              <div><span className="font-medium">Quantity:</span> {event.data?.quantity} {event.data?.unit}</div>
-                              {event.data?.expiryDate && <div><span className="font-medium">Expiry:</span> {event.data.expiryDate}</div>}
-                            </div>
-                          </div>
-                        )}
-
                         {/* Detailed Event Info */}
                         {renderEventDetails(event)}
                       </div>
@@ -469,7 +422,7 @@ const BatchTracker: React.FC = () => {
               Enter a Batch ID or Event ID to view the complete supply chain journey
             </p>
             <div className="bg-blue-50 rounded-lg p-4 max-w-md mx-auto">
-              <p className="text-sm text-blue-700 font-medium mb-2">View detailed information for each event below its summary</p>
+              <p className="text-sm text-blue-700 font-medium mb-2">View detailed information for each event below</p>
               <div className="space-y-1 text-sm text-blue-600">
                 <p>• Complete participant details</p>
                 <p>• Environmental conditions</p>
