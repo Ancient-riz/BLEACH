@@ -356,7 +356,7 @@ const CollectionForm: React.FC = () => {
                 <p className="text-green-900">{qrResult.weight}</p>
               </div>
               <div>
-                <span className="font-medium text-green-700"></span>
+                <span className="font-medium text-green-700">RECORDED TO FABRIC NETWORK</span>
                 <p className="text-green-900">{qrResult.totalPrice}</p>
               </div>
               <div>
