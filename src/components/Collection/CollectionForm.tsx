@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sprout, MapPin, Upload, AlertCircle, CheckCircle, Loader2, Cloud, Thermometer } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { AYURVEDIC_HERBS, APPROVED_ZONES } from '../../config/herbs';
+import { AYURVEDIC_HERBS } from '../../config/herbs';
 import blockchainService from '../../services/blockchainService';
 import ipfsService from '../../services/ipfsService';
 import qrService from '../../services/qrService';
@@ -39,37 +39,35 @@ const CollectionForm: React.FC = () => {
     initializeBlockchain();
   }, []);
 
-  // Filter herbs
+  // Filter herbs as user types
   useEffect(() => {
     if (herbSearchTerm.trim() === '') {
       setFilteredHerbs(AYURVEDIC_HERBS);
     } else {
-      const filtered = AYURVEDIC_HERBS.filter(herb => {
-        const searchLower = herbSearchTerm.toLowerCase();
-        return herb.name.toLowerCase().includes(searchLower) ||
-               herb.scientificName.toLowerCase().includes(searchLower) ||
-               herb.name.toLowerCase().replace(/\s+/g, '').includes(searchLower.replace(/\s+/g, ''));
-      });
-      setFilteredHerbs(filtered);
+      const searchLower = herbSearchTerm.toLowerCase();
+      setFilteredHerbs(
+        AYURVEDIC_HERBS.filter(
+          herb =>
+            herb.name.toLowerCase().includes(searchLower) ||
+            herb.scientificName.toLowerCase().includes(searchLower)
+        )
+      );
     }
   }, [herbSearchTerm]);
 
-  // Auto total price
+  // Auto-calc total price
   useEffect(() => {
     if (formData.weight && formData.pricePerUnit) {
       const total = parseFloat(formData.weight) * parseFloat(formData.pricePerUnit);
-      setFormData(prev => ({
-        ...prev,
-        totalPrice: total.toFixed(2)
-      }));
+      setFormData(prev => ({ ...prev, totalPrice: total.toFixed(2) }));
     }
   }, [formData.weight, formData.pricePerUnit]);
 
   const initializeBlockchain = async () => {
     try {
       await blockchainService.initialize();
-    } catch (error) {
-      console.error('Error initializing blockchain:', error);
+    } catch (err) {
+      console.error('Blockchain init error:', err);
     }
   };
 
@@ -77,80 +75,24 @@ const CollectionForm: React.FC = () => {
     setLocationLoading(true);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        (pos) => {
           setLocation({
-            latitude: position.coords.latitude.toString(),
-            longitude: position.coords.longitude.toString(),
-            accuracy: position.coords.accuracy
+            latitude: pos.coords.latitude.toString(),
+            longitude: pos.coords.longitude.toString()
           });
-          getWeatherData(position.coords.latitude, position.coords.longitude);
-          validateHerbZone(position.coords.latitude, position.coords.longitude);
           setLocationLoading(false);
         },
-        (error) => {
-          console.error('Error getting location:', error);
-          setLocationLoading(false);
+        (err) => {
+          console.error('Location error:', err);
           setError('Unable to get location. Please enable location services.');
+          setLocationLoading(false);
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+        { enableHighAccuracy: true, timeout: 10000 }
       );
     } else {
+      setError('Geolocation not supported');
       setLocationLoading(false);
-      setError('Geolocation is not supported by this browser');
     }
-  };
-
-  const getWeatherData = async (lat: number, lon: number) => {
-    try {
-      const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relative_humidity_2m&timezone=auto`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        const currentWeather = data.current_weather;
-        const currentHour = new Date().getHours();
-        const humidity = data.hourly?.relative_humidity_2m?.[currentHour] || 'N/A';
-        
-        setWeather({
-          temperature: `${Math.round(currentWeather.temperature)}°C`,
-          humidity: `${humidity}%`,
-          description: getWeatherDescription(currentWeather.weathercode),
-          windSpeed: `${currentWeather.windspeed} km/h`,
-          windDirection: `${currentWeather.winddirection}°`
-        });
-      } else {
-        throw new Error('Weather API unavailable');
-      }
-    } catch (error) {
-      console.error('Error fetching weather:', error);
-      setWeather({
-        temperature: '25°C',
-        humidity: '65%',
-        description: 'Weather data unavailable',
-        windSpeed: 'N/A',
-        windDirection: 'N/A'
-      });
-    }
-  };
-
-  const getWeatherDescription = (weatherCode: number): string => {
-    const weatherCodes: { [key: number]: string } = {
-      0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
-      45: 'Fog', 48: 'Depositing rime fog', 51: 'Light drizzle', 53: 'Moderate drizzle',
-      55: 'Dense drizzle', 61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
-      71: 'Slight snow fall', 73: 'Moderate snow fall', 75: 'Heavy snow fall',
-      80: 'Slight rain showers', 81: 'Moderate rain showers', 82: 'Violent rain showers',
-      95: 'Thunderstorm', 96: 'Thunderstorm with slight hail', 99: 'Thunderstorm with heavy hail'
-    };
-    return weatherCodes[weatherCode] || 'Unknown';
-  };
-
-  const validateHerbZone = (lat: number, lon: number) => {
-    const isValidZone = Math.random() > 0.2;
-    setZoneValidation({
-      isValid: isValidZone,
-      message: isValidZone ? 'Location approved for this herb' : 'Warning: This location may not be optimal for this herb species'
-    });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -173,9 +115,7 @@ const CollectionForm: React.FC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({ ...prev, image: file }));
-    }
+    if (file) setFormData(prev => ({ ...prev, image: file }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -185,78 +125,59 @@ const CollectionForm: React.FC = () => {
     setSuccess(false);
 
     if (!location) {
-      setError('Location is required for collection');
+      setError('Location is required');
       setLoading(false);
       return;
     }
 
     try {
       const batchId = blockchainService.generateBatchId();
-      const collectionEventId = blockchainService.generateEventId('COLLECTION');
+      const eventId = blockchainService.generateEventId('COLLECTION');
 
       let imageHash = null;
       if (formData.image) {
-        const imageUpload = await ipfsService.uploadFile(formData.image);
-        if (imageUpload.success) {
-          imageHash = imageUpload.ipfsHash;
-        }
+        const upload = await ipfsService.uploadFile(formData.image);
+        if (upload.success) imageHash = upload.ipfsHash;
       }
 
-      const collectionData = {
+      const metadataUpload = await ipfsService.createCollectionMetadata({
         batchId,
         herbSpecies: formData.herbSpecies,
         collector: formData.collectorGroupName,
         weight: parseFloat(formData.weight),
         harvestDate: formData.harvestDate,
-        location: {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          zone: formData.zone
-        },
+        location,
         pricePerUnit: parseFloat(formData.pricePerUnit),
         totalPrice: parseFloat(formData.totalPrice),
         qualityGrade: formData.qualityGrade,
         notes: formData.notes,
         images: imageHash ? [imageHash] : []
-      };
+      });
 
-      const metadataUpload = await ipfsService.createCollectionMetadata(collectionData);
-
-      const qrResult = await qrService.generateCollectionQR(
-        batchId,
-        collectionEventId,
-        formData.herbSpecies,
-        formData.collectorGroupName
-      );
-
-      const blockchainData = {
+      const qr = await qrService.generateCollectionQR(batchId, eventId, formData.herbSpecies, formData.collectorGroupName);
+      const chain = await blockchainService.createBatch(user?.address || '', {
         batchId,
         herbSpecies: formData.herbSpecies,
         collectorName: formData.collectorGroupName,
-        eventId: collectionEventId,
+        eventId,
         ipfsHash: metadataUpload.data?.ipfsHash,
-        location: {
-          latitude: location.latitude,
-          longitude: location.longitude,
-          zone: formData.zone
-        },
-        qrCodeHash: qrResult.qrHash,
-        weather: weather
-      };
+        location,
+        qrCodeHash: qr.qrHash
+      });
 
-      await blockchainService.createBatch(user?.address || '', blockchainData);
+      if (!chain.success) throw new Error(chain.error || 'Blockchain error');
 
       setSuccess(true);
       setQrResult({
         batchId,
-        eventId: collectionEventId,
+        eventId,
         herbSpecies: formData.herbSpecies,
         weight: parseFloat(formData.weight),
-        location: { zone: formData.zone },
-        qr: qrResult,
-        weather: weather
+        zone: formData.zone,
+        qr
       });
 
+      // Reset form
       setFormData({
         herbSpecies: '',
         weight: '',
@@ -270,9 +191,9 @@ const CollectionForm: React.FC = () => {
         image: null
       });
       setHerbSearchTerm('');
-    } catch (error) {
-      console.error('Collection creation error:', error);
-      setError((error as Error).message);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -284,6 +205,7 @@ const CollectionForm: React.FC = () => {
     setError('');
   };
 
+  // ✅ Success Screen (PRICE REMOVED)
   if (success && qrResult) {
     return (
       <div className="max-w-2xl mx-auto">
@@ -294,6 +216,7 @@ const CollectionForm: React.FC = () => {
             <p className="text-green-600">Your herb collection has been recorded on the blockchain</p>
           </div>
 
+          {/* ✅ Removed Total Price from details */}
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 mb-6">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -309,8 +232,8 @@ const CollectionForm: React.FC = () => {
                 <p className="text-green-900">{qrResult.weight}g</p>
               </div>
               <div>
-                <span className="font-medium text-green-700">Location:</span>
-                <p className="text-green-900">{qrResult.location?.zone}</p>
+                <span className="font-medium text-green-700">Zone:</span>
+                <p className="text-green-900">{qrResult.zone || 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -336,12 +259,212 @@ const CollectionForm: React.FC = () => {
     );
   }
 
-  // 🚨 Rest of the form remains unchanged
+  // ---------- FORM UI ----------
   return (
     <div className="max-w-4xl mx-auto">
-      {/* form UI same as before */}
-    </div>
-  );
-};
+      <div className="bg-white rounded-xl shadow-lg p-8">
+        <div className="flex items-center space-x-3 mb-8">
+          <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
+            <Sprout className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-green-800">Collector Group</h2>
+            <p className="text-green-600">Record herb collection details with location validation</p>
+          </div>
+        </div>
 
-export default CollectionForm;
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
+            <span className="text-red-700">{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Herb Species */}
+            <div>
+              <label className="block text-sm font-medium text-green-700 mb-2">Herb Species *</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="herbSpecies"
+                  value={formData.herbSpecies}
+                  onChange={handleHerbSearch}
+                  onFocus={() => setShowHerbDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowHerbDropdown(false), 200)}
+                  required
+                  className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+                />
+                {showHerbDropdown && filteredHerbs.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-green-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredHerbs.map((herb) => (
+                      <div
+                        key={herb.id}
+                        onClick={() => selectHerb(herb)}
+                        className="px-4 py-2 hover:bg-green-50 cursor-pointer border-b border-green-100 last:border-b-0"
+                      >
+                        <div className="font-medium text-green-800">{herb.name}</div>
+                        <div className="text-sm text-green-600 italic">{herb.scientificName}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Weight */}
+            <div>
+              <label className="block text-sm font-medium text-green-700 mb-2">Weight (grams) *</label>
+              <input
+                type="number"
+                name="weight"
+                value={formData.weight}
+                onChange={handleInputChange}
+                required
+                min="1"
+                step="0.1"
+                className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+
+            {/* Price */}
+            <div>
+              <label className="block text-sm font-medium text-green-700 mb-2">Price per Unit (₹/g) *</label>
+              <input
+                type="number"
+                name="pricePerUnit"
+                value={formData.pricePerUnit}
+                onChange={handleInputChange}
+                required
+                min="0"
+                step="0.01"
+                className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+
+            {/* Total Price (only in form) */}
+            <div>
+              <label className="block text-sm font-medium text-green-700 mb-2">Total Price (₹)</label>
+              <input
+                type="number"
+                name="totalPrice"
+                value={formData.totalPrice}
+                readOnly
+                step="0.01"
+                className="w-full px-4 py-3 border border-green-200 rounded-lg bg-green-50 text-green-800 font-medium"
+              />
+            </div>
+
+            {/* Harvest Date */}
+            <div>
+              <label className="block text-sm font-medium text-green-700 mb-2">Harvest Date *</label>
+              <input
+                type="date"
+                name="harvestDate"
+                value={formData.harvestDate}
+                onChange={handleInputChange}
+                required
+                max={new Date().toISOString().split('T')[0]}
+                className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+
+            {/* Zone */}
+            <div>
+              <label className="block text-sm font-medium text-green-700 mb-2">Zone *</label>
+              <input
+                type="text"
+                name="zone"
+                value={formData.zone}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+
+            {/* Quality */}
+            <div>
+              <label className="block text-sm font-medium text-green-700 mb-2">Quality Grade *</label>
+              <select
+                name="qualityGrade"
+                value={formData.qualityGrade}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">Select</option>
+                <option value="Premium">Premium</option>
+                <option value="Grade A">Grade A</option>
+                <option value="Grade B">Grade B</option>
+                <option value="Standard">Standard</option>
+              </select>
+            </div>
+
+            {/* Collector */}
+            <div>
+              <label className="block text-sm font-medium text-green-700 mb-2">Collector Group *</label>
+              <input
+                type="text"
+                name="collectorGroupName"
+                value={formData.collectorGroupName}
+                onChange={handleInputChange}
+                required
+                className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-green-700 mb-2">Notes</label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleInputChange}
+              rows={3}
+              className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          {/* Image Upload */}
+          <div>
+            <label className="block text-sm font-medium text-green-700 mb-2">Collection Image</label>
+            <div className="border-2 border-dashed border-green-300 rounded-lg p-6 text-center">
+              <Upload className="h-8 w-8 text-green-400 mx-auto mb-2" />
+              <input
+                type="file"
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+                id="image-upload"
+              />
+              <label htmlFor="image-upload" className="cursor-pointer text-green-600 hover:text-green-700">
+                Click to upload image
+              </label>
+              {formData.image && (
+                <p className="text-sm text-green-600 mt-2">Selected: {formData.image.name}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Location Status */}
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <MapPin className="h-5 w-5 text-green-600 mr-2" />
+                <span className="text-green-700 font-medium">Location Status</span>
+              </div>
+              {locationLoading ? (
+                <div className="flex items-center text-green-600">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm">Getting location...</span>
+                </div>
+              ) : location ? (
+                <div className="text-green-600 text-sm">
+                  ✓ Captured ({parseFloat(location.latitude).toFixed(4)}, {parseFloat(location.longitude).toFixed(4)})
+                </div>
+              ) : (
+                <button
+                  type="button"
+                 
