@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Package, Eye, Calendar, User, MapPin, FileText, QrCode, Download } from 'lucide-react';
+import { Search, Package, Calendar, User, FileText, QrCode, Download } from 'lucide-react';
 import blockchainService from '../../services/blockchainService';
 import qrService from '../../services/qrService';
 
@@ -284,7 +284,16 @@ const BatchTracker: React.FC = () => {
                                 </div>
                               )}
                               {event.data?.weather && (
-                                <div><span className="font-medium">Weather:</span> {event.data.weather}</div>
+                                <div className="col-span-2">
+                                  <span className="font-medium">Weather:</span>
+                                  <ul className="list-disc list-inside ml-4 text-gray-700">
+                                    {event.data.weather.temperature && <li>Temperature: {event.data.weather.temperature}°C</li>}
+                                    {event.data.weather.humidity && <li>Humidity: {event.data.weather.humidity}%</li>}
+                                    {event.data.weather.description && <li>Condition: {event.data.weather.description}</li>}
+                                    {event.data.weather.windSpeed && <li>Wind Speed: {event.data.weather.windSpeed} km/h</li>}
+                                    {event.data.weather.windDirection && <li>Wind Direction: {event.data.weather.windDirection}</li>}
+                                  </ul>
+                                </div>
                               )}
                               {event.data?.soilType && (
                                 <div><span className="font-medium">Soil Type:</span> {event.data.soilType}</div>
@@ -338,28 +347,3 @@ const BatchTracker: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Demo Instructions */}
-        {!searchResult && !loading && (
-          <div className="text-center py-12">
-            <Search className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Track Any Batch</h3>
-            <p className="text-gray-600 mb-4">
-              Enter a Batch ID or Event ID to view the complete supply chain journey
-            </p>
-            <div className="bg-blue-50 rounded-lg p-4 max-w-md mx-auto">
-              <p className="text-sm text-blue-700 font-medium mb-2">TRACK IT UP </p>
-              <div className="space-y-1 text-sm text-blue-600 font-mono">
-                <p></p>
-                <p></p>
-                <p></p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default BatchTracker;
