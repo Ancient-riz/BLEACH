@@ -16,9 +16,53 @@ import { useAuth } from '../../hooks/useAuth';
 import blockchainService from '../../services/blockchainService';
 import qrService from '../../services/qrService';
 
+// Sample manufactured batch inspired by "One Piece"
+const sampleManufacturedBatch = {
+  batchId: 'GOMU-GOMU-001',
+  herbSpecies: 'Gomu Gomu Fruit',
+  currentStatus: 'MANUFACTURED',
+  creator: 'Dr. Vegapunk',
+  lastUpdated: new Date().toISOString(),
+  eventCount: 4,
+  events: [
+    {
+      eventId: 'EVT-001',
+      eventType: 'COLLECTED',
+      participant: 'Monkey D. Luffy',
+      organization: 'Straw Hat Pirates',
+      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+      data: { location: 'East Blue', quantity: '1 fruit' }
+    },
+    {
+      eventId: 'EVT-002',
+      eventType: 'QUALITY_TESTED',
+      participant: 'Dr. Vegapunk',
+      organization: 'World Government',
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      data: { testResult: 'Mythical Zoan Type' }
+    },
+    {
+      eventId: 'EVT-003',
+      eventType: 'PROCESSED',
+      participant: 'Dr. Vegapunk',
+      organization: 'World Government',
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      data: { processingMethod: 'Encapsulation' }
+    },
+    {
+      eventId: 'EVT-004',
+      eventType: 'MANUFACTURED',
+      participant: 'Dr. Vegapunk',
+      organization: 'World Government',
+      timestamp: new Date().toISOString(),
+      data: { product: 'Hito Hito no Mi, Model: Nika' }
+    }
+  ]
+};
+
 const ActiveBatches: React.FC = () => {
   const { user } = useAuth();
-  const [batches, setBatches] = useState<any[]>([]);
+  const [batches, setBatches] = useState<any[]>([sampleManufacturedBatch]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [downloadingQR, setDownloadingQR] = useState<string | null>(null);
@@ -46,8 +90,8 @@ const ActiveBatches: React.FC = () => {
     try {
       const allBatches = await blockchainService.getAllBatches();
       
-      // Show all batches but mark completed ones
-      const activeBatches = allBatches;
+      // Combine sample batch with fetched batches
+      const activeBatches = [...allBatches, sampleManufacturedBatch];
 
       // Sort by last updated (most recent first)
       activeBatches.sort((a: any, b: any) => 
@@ -68,6 +112,7 @@ const ActiveBatches: React.FC = () => {
       case 'QUALITY_TESTED': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'PROCESSED': return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'IN_PROGRESS': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'MANUFACTURED': return 'bg-orange-100 text-orange-800 border-orange-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -78,6 +123,7 @@ const ActiveBatches: React.FC = () => {
       case 'QUALITY_TESTED': return <CheckCircle className="h-4 w-4" />;
       case 'PROCESSED': return <CheckCircle className="h-4 w-4" />;
       case 'IN_PROGRESS': return <Clock className="h-4 w-4" />;
+      case 'MANUFACTURED': return <CheckCircle className="h-4 w-4" />;
       default: return <AlertCircle className="h-4 w-4" />;
     }
   };
@@ -157,6 +203,8 @@ const ActiveBatches: React.FC = () => {
         return user.role === 3; // Processors can access tested batches
       case 'PROCESSED':
         return user.role === 4; // Manufacturers can access processed batches
+      case 'MANUFACTURED':
+        return user.role === 6; // Consumers can access manufactured batches
       default:
         return true; // Allow access to in-progress batches
     }
@@ -208,6 +256,7 @@ const ActiveBatches: React.FC = () => {
               <option value="collected">Collected</option>
               <option value="quality_tested">Quality Tested</option>
               <option value="processed">Processed</option>
+              <option value="manufactured">Manufactured</option>
             </select>
             
             <button
