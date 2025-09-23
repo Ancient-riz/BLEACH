@@ -9,9 +9,11 @@ import {
   Download,
   Calendar,
   User,
+  MapPin,
   Loader2
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import blockchainService from '../../services/blockchainService';
 import qrService from '../../services/qrService';
 
 const ActiveBatches: React.FC = () => {
@@ -22,101 +24,39 @@ const ActiveBatches: React.FC = () => {
   const [downloadingQR, setDownloadingQR] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load mock ONE PIECE batches
     fetchActiveBatches();
-
-    // simulate periodic refresh
+    
+    // Set up real-time updates
+    const handleDataUpdate = () => {
+      fetchActiveBatches();
+    };
+    
+    window.addEventListener('herbionyx-data-update', handleDataUpdate);
+    
+    // Also refresh every 5 seconds as backup
     const interval = setInterval(fetchActiveBatches, 5000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('herbionyx-data-update', handleDataUpdate);
+    };
   }, []);
 
   const fetchActiveBatches = async () => {
     try {
-      // Mock ONE PIECE batches
-      const mockBatches = [
-        {
-          batchId: 'OP-001',
-          herbSpecies: 'ONE PIECE – Gum-Gum Fruit',
-          currentStatus: 'COLLECTED',
-          creator: 'Monkey D. Luffy',
-          eventCount: 2,
-          lastUpdated: new Date().toISOString(),
-          events: [
-            {
-              eventId: 'EVT-1',
-              eventType: 'COLLECTED',
-              participant: 'Monkey D. Luffy',
-              organization: 'Straw Hat Pirates',
-              timestamp: new Date().toISOString(),
-              data: { location: 'East Blue' }
-            }
-          ]
-        },
-        {
-          batchId: 'OP-002',
-          herbSpecies: 'ONE PIECE – Three Sword Style Steel',
-          currentStatus: 'QUALITY_TESTED',
-          creator: 'Roronoa Zoro',
-          eventCount: 3,
-          lastUpdated: new Date().toISOString(),
-          events: [
-            {
-              eventId: 'EVT-2',
-              eventType: 'COLLECTED',
-              participant: 'Tashigi',
-              organization: 'Marines',
-              timestamp: new Date().toISOString(),
-              data: { location: 'Shimotsuki Village' }
-            },
-            {
-              eventId: 'EVT-3',
-              eventType: 'QUALITY_TESTED',
-              participant: 'Roronoa Zoro',
-              organization: 'Straw Hat Pirates',
-              timestamp: new Date().toISOString(),
-              data: { swords: 3 }
-            }
-          ]
-        },
-        {
-          batchId: 'OP-003',
-          herbSpecies: 'ONE PIECE – All Blue Ingredients',
-          currentStatus: 'PROCESSED',
-          creator: 'Vinsmoke Sanji',
-          eventCount: 4,
-          lastUpdated: new Date().toISOString(),
-          events: [
-            {
-              eventId: 'EVT-4',
-              eventType: 'COLLECTED',
-              participant: 'Sanji',
-              organization: 'Baratie',
-              timestamp: new Date().toISOString(),
-              data: { dish: 'Seafood Feast' }
-            },
-            {
-              eventId: 'EVT-5',
-              eventType: 'QUALITY_TESTED',
-              participant: 'Nami',
-              organization: 'Straw Hat Pirates',
-              timestamp: new Date().toISOString(),
-              data: { weatherCheck: 'Clear' }
-            },
-            {
-              eventId: 'EVT-6',
-              eventType: 'PROCESSED',
-              participant: 'Sanji',
-              organization: 'Baratie',
-              timestamp: new Date().toISOString(),
-              data: { processed: 'Cooked Ingredients' }
-            }
-          ]
-        }
-      ];
+      const allBatches = await blockchainService.getAllBatches();
+      
+      // Show all batches but mark completed ones
+      const activeBatches = allBatches;
 
-      setBatches(mockBatches);
+      // Sort by last updated (most recent first)
+      activeBatches.sort((a: any, b: any) => 
+        new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+      );
+
+      setBatches(activeBatches);
     } catch (error) {
-      console.error('Error fetching mock batches:', error);
+      console.error('Error fetching active batches:', error);
     } finally {
       setLoading(false);
     }
@@ -155,7 +95,10 @@ const ActiveBatches: React.FC = () => {
   const handleDownloadQR = async (batch: any) => {
     setDownloadingQR(batch.batchId);
     try {
+      // Get the latest event to determine current stage
       const latestEvent = batch.events[batch.events.length - 1];
+      
+      // Generate high-quality QR code for the latest event
       const qrResult = await qrService.generatePrintableQR(
         batch.batchId,
         latestEvent.eventId,
@@ -166,14 +109,32 @@ const ActiveBatches: React.FC = () => {
         }
       );
 
+      // Create download link
       const link = document.createElement('a');
       link.href = qrResult;
       link.download = `${batch.batchId}-${batch.currentStatus}-QR.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      // Show success notification
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
+      toast.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span>QR downloaded: ${batch.batchId}-${batch.currentStatus}-QR.png</span>
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
     } catch (error) {
       console.error('Error downloading QR:', error);
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+      toast.textContent = 'Failed to download QR code';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
     } finally {
       setDownloadingQR(null);
     }
@@ -181,12 +142,23 @@ const ActiveBatches: React.FC = () => {
 
   const canUserAccess = (batch: any) => {
     if (!user) return false;
-    if (user.role === 5 || user.role === 6) return true; // admin + consumer
+    
+    // Admin can access all
+    if (user.role === 5) return true;
+    
+    // Consumer can access all for verification
+    if (user.role === 6) return true;
+    
+    // Role-based access based on current status
     switch (batch.currentStatus) {
-      case 'COLLECTED': return user.role === 2;
-      case 'QUALITY_TESTED': return user.role === 3;
-      case 'PROCESSED': return user.role === 4;
-      default: return true;
+      case 'COLLECTED':
+        return user.role === 2; // Testers can access collected batches
+      case 'QUALITY_TESTED':
+        return user.role === 3; // Processors can access tested batches
+      case 'PROCESSED':
+        return user.role === 4; // Manufacturers can access processed batches
+      default:
+        return true; // Allow access to in-progress batches
     }
   };
 
@@ -203,7 +175,7 @@ const ActiveBatches: React.FC = () => {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin text-green-600 mx-auto mb-4" />
-              <p className="text-gray-600">Loading active ONE PIECE batches...</p>
+              <p className="text-gray-600">Loading active batches...</p>
             </div>
           </div>
         </div>
@@ -220,39 +192,255 @@ const ActiveBatches: React.FC = () => {
               <Package className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-green-800">ONE PIECE Active Batches</h2>
-              <p className="text-green-600">Mock Straw Hat supply chain in progress</p>
+              <h2 className="text-2xl font-bold text-green-800">Active Batches</h2>
+              <p className="text-green-600">Ongoing batches in the supply chain</p>
             </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
+            >
+              <option value="all">All Active Batches</option>
+              <option value="accessible">Accessible to Me</option>
+              <option value="collected">Collected</option>
+              <option value="quality_tested">Quality Tested</option>
+              <option value="processed">Processed</option>
+            </select>
+            
+            <button
+              onClick={fetchActiveBatches}
+              className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm"
+            >
+              Refresh
+            </button>
           </div>
         </div>
 
-        {/* Render cards (logic unchanged, just uses mock batches) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredBatches.map((batch) => (
-            <div key={batch.batchId} className="bg-white border-2 rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(batch.currentStatus)}`}>
-                  {getStatusIcon(batch.currentStatus)}
-                  <span className="ml-1">{batch.currentStatus.replace('_', ' ')}</span>
-                </span>
-              </div>
-              <h3 className="font-bold text-gray-900 text-lg">{batch.herbSpecies}</h3>
-              <p className="text-sm text-gray-600 font-mono">{batch.batchId}</p>
-              <p className="text-sm text-gray-600 mt-2">Creator: {batch.creator}</p>
-              <p className="text-sm text-gray-600">Events: {batch.eventCount}</p>
-              <p className="text-sm text-gray-600">Next: {getNextStep(batch.currentStatus)}</p>
+        {filteredBatches.length === 0 ? (
+          <div className="text-center py-12">
+            <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Batches</h3>
+            <p className="text-gray-600">
+              {filter === 'accessible' 
+                ? 'No batches are currently accessible for your role'
+                : 'No batches found. Create a new collection to get started.'
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredBatches.map((batch) => (
+              <div
+                key={batch.batchId}
+                className={`bg-white border-2 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 ${
+                  batch.currentStatus === 'MANUFACTURED' 
+                    ? 'border-green-200 bg-green-50' 
+                    : canUserAccess(batch) 
+                      ? 'border-blue-200 hover:border-blue-300' 
+                      : 'border-gray-200'
+                }`}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(batch.currentStatus)}`}>
+                      {getStatusIcon(batch.currentStatus)}
+                      <span className="ml-1">{batch.currentStatus.replace('_', ' ')}</span>
+                    </span>
+                  </div>
+                  {canUserAccess(batch) && (
+                    <div className="flex items-center space-x-1">
+                      <Eye className="h-4 w-4 text-green-600" />
+                      <span className="text-xs text-green-600 font-medium">Accessible</span>
+                    </div>
+                  )}
+                </div>
 
-              <div className="flex space-x-2 mt-4">
-                <button
-                  onClick={() => handleDownloadQR(batch)}
-                  disabled={downloadingQR === batch.batchId}
-                  className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
-                >
-                  {downloadingQR === batch.batchId ? 'Downloading...' : 'Download QR'}
-                </button>
+                {/* Batch Info */}
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-lg">{batch.herbSpecies}</h3>
+                    <p className="text-sm text-gray-600 font-mono">{batch.batchId}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <User className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">{batch.creator}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Package className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">{batch.eventCount} events</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 text-sm">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-600">
+                      Updated: {new Date(batch.lastUpdated).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  {/* Next Step */}
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">
+                        {getNextStep(batch.currentStatus)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Latest Event */}
+                  {batch.events && batch.events.length > 0 && (
+                    <div className="border-t pt-3">
+                      <p className="text-xs text-gray-500 mb-1">Latest Event:</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          {batch.events[batch.events.length - 1].eventType.replace('_', ' ')}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(batch.events[batch.events.length - 1].timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex space-x-2 pt-2">
+                    <button
+                      onClick={() => {
+                        // Show batch details in a modal or navigate to tracking
+                        const batchDetails = {
+                          ...batch,
+                          events: batch.events || []
+                        };
+                        
+                        // Create a detailed view modal
+                        const modal = document.createElement('div');
+                        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+                        modal.innerHTML = `
+                          <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[80vh] overflow-auto p-6">
+                            <div class="flex items-center justify-between mb-6">
+                              <h2 class="text-2xl font-bold text-gray-900">Batch Details: ${batch.herbSpecies}</h2>
+                              <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                              </button>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                              <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-gray-700">Batch ID</h3>
+                                <p class="font-mono text-sm">${batch.batchId}</p>
+                              </div>
+                              <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-gray-700">Status</h3>
+                                <p class="font-semibold ${batch.currentStatus === 'MANUFACTURED' ? 'text-green-600' : 'text-blue-600'}">${batch.currentStatus}</p>
+                              </div>
+                              <div class="bg-gray-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-gray-700">Events</h3>
+                                <p class="font-semibold">${batch.eventCount} completed</p>
+                              </div>
+                            </div>
+                            
+                            <div class="space-y-4">
+                              <h3 class="text-lg font-semibold">Supply Chain Journey</h3>
+                              ${batch.events.map((event: any, index: number) => `
+                                <div class="border-l-4 border-blue-500 pl-4 py-2">
+                                  <div class="flex items-center justify-between">
+                                    <h4 class="font-semibold">${event.eventType.replace('_', ' ')}</h4>
+                                    <span class="text-sm text-gray-500">${new Date(event.timestamp).toLocaleString()}</span>
+                                  </div>
+                                  <p class="text-gray-600">${event.participant} - ${event.organization}</p>
+                                  ${event.data ? `<p class="text-sm text-gray-500 mt-1">${JSON.stringify(event.data).substring(0, 100)}...</p>` : ''}
+                                </div>
+                              `).join('')}
+                            </div>
+                          </div>
+                        `;
+                        document.body.appendChild(modal);
+                      }}
+                      className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>View</span>
+                    </button>
+                    
+                    {canUserAccess(batch) && (
+                      <button
+                        onClick={() => {
+                          // Copy batch ID to clipboard for easy use
+                          navigator.clipboard.writeText(batch.batchId);
+                          // Show toast notification
+                          const toast = document.createElement('div');
+                          toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                          toast.textContent = 'Batch ID copied to clipboard!';
+                          document.body.appendChild(toast);
+                          setTimeout(() => toast.remove(), 2000);
+                        }}
+                        className="flex-1 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
+                      >
+                        <QrCode className="h-4 w-4" />
+                        <span>Use</span>
+                      </button>
+                    )}
+                      <button
+                        onClick={() => handleDownloadQR(batch)}
+                        disabled={downloadingQR === batch.batchId}
+                        className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium flex items-center justify-center space-x-1 disabled:opacity-50"
+                        title="Download QR for current stage"
+                      >
+                        {downloadingQR === batch.batchId ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700"></div>
+                            <span>Downloading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4" />
+                            <span>Download QR</span>
+                          </>
+                        )}
+                      </button>
+                      
+                  </div>
+                </div>
               </div>
+            ))}
+          </div>
+        )}
+
+        {/* Summary Stats */}
+        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-green-50 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-green-800">
+              {batches.filter(b => b.currentStatus === 'COLLECTED').length}
             </div>
-          ))}
+            <div className="text-sm text-green-600">Collected</div>
+          </div>
+          <div className="bg-blue-50 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-blue-800">
+              {batches.filter(b => b.currentStatus === 'QUALITY_TESTED').length}
+            </div>
+            <div className="text-sm text-blue-600">Quality Tested</div>
+          </div>
+          <div className="bg-purple-50 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-purple-800">
+              {batches.filter(b => b.currentStatus === 'PROCESSED').length}
+            </div>
+            <div className="text-sm text-purple-600">Processed</div>
+          </div>
+          <div className="bg-green-50 rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-orange-800">
+              {batches.filter(b => b.currentStatus === 'MANUFACTURED').length}
+            </div>
+            <div className="text-sm text-orange-600">Completed</div>
+          </div>
         </div>
       </div>
     </div>
