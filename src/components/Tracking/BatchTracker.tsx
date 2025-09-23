@@ -241,7 +241,7 @@ const BatchTracker: React.FC = () => {
                 <span className="text-purple-900 font-mono text-xs"> 
                   {(event.data?.processingLocation?.latitude && event.data?.processingLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
                     ? `${parseFloat((event.data?.processingLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.processingLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
-                    : 'Not available'}
+                    : ''}
                 </span>
               </div>
             </div>
