@@ -13,7 +13,6 @@ const BatchTracker: React.FC = () => {
   // Set up real-time updates
   useEffect(() => {
     const handleDataUpdate = () => {
-      // Refresh current search if we have one
       if (searchQuery && searchResult) {
         handleSearch(new Event('submit') as any, true);
       }
@@ -34,7 +33,6 @@ const BatchTracker: React.FC = () => {
     if (!skipFormCheck) setSearchResult(null);
 
     try {
-      // Try to get batch info by event ID or batch ID
       const queryId = skipFormCheck ? searchQuery : searchQuery.trim();
       const result = await blockchainService.getBatchInfo(queryId);
       setSearchResult(result.batch);
@@ -51,11 +49,9 @@ const BatchTracker: React.FC = () => {
   const handleDownloadQR = async (batch: any) => {
     setDownloadingQR(true);
     try {
-      // Get the latest event to determine current stage
       const latestEvent = batch.events[batch.events.length - 1];
       const currentStage = latestEvent.eventType.replace('_', ' ');
       
-      // Generate high-quality QR code for the latest event
       const qrResult = await qrService.generatePrintableQR(
         batch.batchId,
         latestEvent.eventId,
@@ -66,7 +62,6 @@ const BatchTracker: React.FC = () => {
         }
       );
 
-      // Create download link
       const link = document.createElement('a');
       link.href = qrResult;
       link.download = `${batch.batchId}-${batch.currentStatus}-QR.png`;
@@ -74,7 +69,6 @@ const BatchTracker: React.FC = () => {
       link.click();
       document.body.removeChild(link);
 
-      // Show success notification
       showSuccessNotification(`QR code downloaded: ${batch.batchId}-${batch.currentStatus}-QR.png`);
     } catch (error) {
       console.error('Error downloading QR:', error);
@@ -130,8 +124,17 @@ const BatchTracker: React.FC = () => {
     }
   };
 
+  const isValidCoordinate = (coord: string | undefined | null): boolean => {
+    if (!coord || coord === '0' || coord === '') return false;
+    const num = parseFloat(coord);
+    return !isNaN(num) && num !== 0;
+  };
+
   const renderEventDetails = (event: any) => {
     const details = [];
+    
+    // Debug log to inspect event data
+    console.log(`Event data for ${event.eventType}:`, event.data);
 
     switch (event.eventType) {
       case 'COLLECTION':
@@ -147,7 +150,7 @@ const BatchTracker: React.FC = () => {
               <div className="col-span-2">
                 <span className="font-medium text-green-700">GPS Coordinates:</span> 
                 <span className="text-green-900 font-mono text-xs"> 
-                  {event.data?.location?.latitude && event.data?.location?.longitude 
+                  {isValidCoordinate(event.data?.location?.latitude) && isValidCoordinate(event.data?.location?.longitude)
                     ? `${parseFloat(event.data.location.latitude).toFixed(6)}, ${parseFloat(event.data.location.longitude).toFixed(6)}`
                     : 'Not available'}
                 </span>
@@ -187,8 +190,10 @@ const BatchTracker: React.FC = () => {
               <div className="col-span-2">
                 <span className="font-medium text-blue-700">GPS Coordinates:</span> 
                 <span className="text-blue-900 font-mono text-xs"> 
-                  {(event.data?.testLocation?.latitude && event.data?.testLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
-                    ? `${parseFloat((event.data?.testLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.testLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
+                  {isValidCoordinate(event.data?.testLocation?.latitude) && isValidCoordinate(event.data?.testLocation?.longitude)
+                    ? `${parseFloat(event.data.testLocation.latitude).toFixed(6)}, ${parseFloat(event.data.testLocation.longitude).toFixed(6)}`
+                    : isValidCoordinate(event.data?.location?.latitude) && isValidCoordinate(event.data?.location?.longitude)
+                    ? `${parseFloat(event.data.location.latitude).toFixed(6)}, ${parseFloat(event.data.location.longitude).toFixed(6)}`
                     : 'Not available'}
                 </span>
               </div>
@@ -235,12 +240,12 @@ const BatchTracker: React.FC = () => {
               {event.data?.yieldPercentage && (
                 <div><span className="font-medium text-purple-700">Yield Efficiency:</span> <span className="text-purple-900">{event.data.yieldPercentage.toFixed(2)}%</span></div>
               )}
-              <div className="col-span-2"><span className="font-medium text-purple-700">Processing Location:</span> <span className="text-purple-900">{event.data?.processingLocation?.zone || event.data?.location?.zone || 'Processing Facility'}</span></div>
+              <div className="col-span-2"><span className="font-medium text-purple-700">Processing Location:</span> <span className="text-purple-900">{event.data?.location?.zone || 'Processing Facility'}</span></div>
               <div className="col-span-2">
                 <span className="font-medium text-purple-700">GPS Coordinates:</span> 
                 <span className="text-purple-900 font-mono text-xs"> 
-                  {(event.data?.processingLocation?.latitude && event.data?.processingLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
-                    ? `${parseFloat((event.data?.processingLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.processingLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
+                  {isValidCoordinate(event.data?.location?.latitude) && isValidCoordinate(event.data?.location?.longitude)
+                    ? `${parseFloat(event.data.location.latitude).toFixed(6)}, ${parseFloat(event.data.location.longitude).toFixed(6)}`
                     : 'Not available'}
                 </span>
               </div>
@@ -271,8 +276,10 @@ const BatchTracker: React.FC = () => {
               <div className="col-span-2">
                 <span className="font-medium text-orange-700">GPS Coordinates:</span> 
                 <span className="text-orange-900 font-mono text-xs"> 
-                  {(event.data?.manufacturingLocation?.latitude && event.data?.manufacturingLocation?.longitude) || (event.data?.location?.latitude && event.data?.location?.longitude)
-                    ? `${parseFloat((event.data?.manufacturingLocation?.latitude || event.data?.location?.latitude)).toFixed(6)}, ${parseFloat((event.data?.manufacturingLocation?.longitude || event.data?.location?.longitude)).toFixed(6)}`
+                  {isValidCoordinate(event.data?.manufacturingLocation?.latitude) && isValidCoordinate(event.data?.manufacturingLocation?.longitude)
+                    ? `${parseFloat(event.data.manufacturingLocation.latitude).toFixed(6)}, ${parseFloat(event.data.manufacturingLocation.longitude).toFixed(6)}`
+                    : isValidCoordinate(event.data?.location?.latitude) && isValidCoordinate(event.data?.location?.longitude)
+                    ? `${parseFloat(event.data.location.latitude).toFixed(6)}, ${parseFloat(event.data.location.longitude).toFixed(6)}`
                     : 'Not available'}
                 </span>
               </div>
@@ -298,7 +305,6 @@ const BatchTracker: React.FC = () => {
           </div>
         </div>
 
-        {/* Search Form */}
         <form onSubmit={handleSearch} className="mb-8">
           <div className="flex space-x-4">
             <div className="flex-1">
@@ -330,17 +336,14 @@ const BatchTracker: React.FC = () => {
           </div>
         </form>
 
-        {/* Error Message */}
         {error && (
           <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-red-700">{error}</p>
           </div>
         )}
 
-        {/* Search Results */}
         {searchResult && (
           <div className="space-y-8">
-            {/* Batch Header */}
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -387,7 +390,6 @@ const BatchTracker: React.FC = () => {
               </div>
             </div>
 
-            {/* Events Timeline */}
             <div>
               <h4 className="text-lg font-semibold text-gray-800 mb-6">Supply Chain Journey</h4>
               <div className="space-y-6">
@@ -429,7 +431,6 @@ const BatchTracker: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Detailed Event Info */}
                         {renderEventDetails(event)}
                       </div>
                     </div>
@@ -440,7 +441,6 @@ const BatchTracker: React.FC = () => {
           </div>
         )}
 
-        {/* Demo Instructions */}
         {!searchResult && !loading && (
           <div className="text-center py-12">
             <Search className="h-16 w-16 text-gray-400 mx-auto mb-4" />
