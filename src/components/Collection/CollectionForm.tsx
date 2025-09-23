@@ -16,7 +16,6 @@ const CollectionForm: React.FC = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [qrResult, setQrResult] = useState<any>(null);
   const [weather, setWeather] = useState<any>(null);
-  const [zoneValidation, setZoneValidation] = useState<any>(null);
   const [filteredHerbs, setFilteredHerbs] = useState(AYURVEDIC_HERBS);
   const [herbSearchTerm, setHerbSearchTerm] = useState('');
   const [showHerbDropdown, setShowHerbDropdown] = useState(false);
@@ -169,7 +168,7 @@ const CollectionForm: React.FC = () => {
         formData.collectorGroupName
       );
 
-      // ✅ FIX: include weight, grade, harvestDate in blockchain
+      // ✅ FIX: include weight, grade, harvestDate in blockchain event
       const blockchainData = {
         batchId,
         herbSpecies: formData.herbSpecies,
@@ -266,7 +265,7 @@ const CollectionForm: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit}>
-      {/* keep your form UI same as before */}
+      {/* keep your existing form fields + submit button */}
     </form>
   );
 };
