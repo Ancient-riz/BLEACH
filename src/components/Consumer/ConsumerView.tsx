@@ -176,7 +176,9 @@ const ConsumerView: React.FC = () => {
       pesticideLevel: `${qualityEvent.data.pesticideLevel} ppm`,
       testMethod: qualityEvent.data.testMethod || 'Standard Laboratory Test',
       testDate: new Date(qualityEvent.timestamp).toLocaleDateString(),
-      labName: qualityEvent.organization || 'Certified Laboratory'
+      labName: qualityEvent.organization || 'Certified Laboratory',
+      location: getLocationFromEvent(qualityEvent),
+      coordinates: getCoordinatesFromEvent(qualityEvent)
     };
   };
 
@@ -221,34 +223,25 @@ const ConsumerView: React.FC = () => {
     return {
       processingMethod: processingEvent?.data?.method || 'Not specified',
       processingLocation: processingEvent?.data?.location?.zone || 'Processing Facility',
+      processingCoordinates: getCoordinatesFromEvent(processingEvent),
       manufacturingLocation: mfgEvent?.data?.manufacturingLocation?.zone || 'Manufacturing Plant',
+      manufacturingCoordinates: getCoordinatesFromEvent(mfgEvent),
       yieldEfficiency: processingEvent?.data?.yieldPercentage ? `${processingEvent.data.yieldPercentage.toFixed(1)}%` : 'Not available',
       processingTemperature: processingEvent?.data?.temperature ? `${processingEvent.data.temperature}°C` : 'Not specified'
     };
   };
 
-  const buildDetailedJourneyFromEvents = (events: any[]) => {
-    return events.map(event => ({
-      stage: event.eventType.replace('_', ' '),
-      location: getLocationFromEvent(event),
-      coordinates: getCoordinatesFromEvent(event),
-      date: new Date(event.timestamp).toLocaleDateString(),
-      time: new Date(event.timestamp).toLocaleTimeString(),
-      participant: event.participant,
-      organization: event.organization,
-      details: getEventDetails(event),
-      icon: getEventIcon(event.eventType)
-    }));
-  };
-
   const getLocationFromEvent = (event: any) => {
-    if (event.data?.location?.zone) return event.data.location.zone;
-    if (event.data?.location?.address) return event.data.location.address;
-    return `${event.organization} Facility`;
+    if (!event?.data?.location) {
+      return `${event?.organization || 'Unknown'} Facility`;
+    }
+    if (event.data.location.zone) return event.data.location.zone;
+    if (event.data.location.address) return event.data.location.address;
+    return `${event.organization || 'Unknown'} Facility`;
   };
 
   const getCoordinatesFromEvent = (event: any) => {
-    if (event.data?.location?.latitude && event.data?.location?.longitude) {
+    if (event?.data?.location?.latitude && event?.data?.location?.longitude) {
       return {
         lat: parseFloat(event.data.location.latitude).toFixed(6),
         lng: parseFloat(event.data.location.longitude).toFixed(6)
@@ -519,6 +512,17 @@ const ConsumerView: React.FC = () => {
                         <p className="text-gray-900">{productInfo.qualityMetrics.labName}</p>
                       </div>
                     </div>
+                    {productInfo.qualityMetrics.location && (
+                      <div className="mt-4">
+                        <span className="font-medium text-gray-600">Location:</span>
+                        <p className="text-gray-900">{productInfo.qualityMetrics.location}</p>
+                        {productInfo.qualityMetrics.coordinates && (
+                          <p className="text-gray-500 text-xs font-mono">
+                            {productInfo.qualityMetrics.coordinates.lat}, {productInfo.qualityMetrics.coordinates.lng}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -531,21 +535,29 @@ const ConsumerView: React.FC = () => {
                   <Factory className="h-6 w-6 mr-3 text-purple-600" />
                   Processing & Compliance Information
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="bg-purple-50 rounded-lg p-4">
-                      <h5 className="font-semibold text-purple-800 mb-2">Processing Details</h5>
-                      <p className="text-purple-900">Method: {productInfo.complianceInfo.processingMethod}</p>
-                      <p className="text-purple-900">Temperature: {productInfo.complianceInfo.processingTemperature}</p>
-                      <p className="text-purple-900">Yield Efficiency: {productInfo.complianceInfo.yieldEfficiency}</p>
-                    </div>
+                <div className="space-y-6">
+                  {/* Processing Details */}
+                  <div className="bg-purple-50 rounded-lg p-4">
+                    <h5 className="font-semibold text-purple-800 mb-2">Processing Details</h5>
+                    <p className="text-purple-900">Method: {productInfo.complianceInfo.processingMethod}</p>
+                    <p className="text-purple-900">Temperature: {productInfo.complianceInfo.processingTemperature}</p>
+                    <p className="text-purple-900">Yield Efficiency: {productInfo.complianceInfo.yieldEfficiency}</p>
+                    <p className="text-purple-900">Location: {productInfo.complianceInfo.processingLocation}</p>
+                    {productInfo.complianceInfo.processingCoordinates && (
+                      <p className="text-purple-700 text-sm font-mono">
+                        {productInfo.complianceInfo.processingCoordinates.lat}, {productInfo.complianceInfo.processingCoordinates.lng}
+                      </p>
+                    )}
                   </div>
-                  <div className="space-y-4">
-                    <div className="bg-orange-50 rounded-lg p-4">
-                      <h5 className="font-semibold text-orange-800 mb-2">Facility Locations</h5>
-                      <p className="text-orange-900">Processing: {productInfo.complianceInfo.processingLocation}</p>
-                      <p className="text-orange-900">Manufacturing: {productInfo.complianceInfo.manufacturingLocation}</p>
-                    </div>
+                  {/* Manufacturing Details */}
+                  <div className="bg-orange-50 rounded-lg p-4">
+                    <h5 className="font-semibold text-orange-800 mb-2">Manufacturing Details</h5>
+                    <p className="text-orange-900">Location: {productInfo.complianceInfo.manufacturingLocation}</p>
+                    {productInfo.complianceInfo.manufacturingCoordinates && (
+                      <p className="text-orange-700 text-sm font-mono">
+                        {productInfo.complianceInfo.manufacturingCoordinates.lat}, {productInfo.complianceInfo.manufacturingCoordinates.lng}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
