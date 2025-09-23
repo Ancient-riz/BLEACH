@@ -101,7 +101,7 @@ const BatchTracker: React.FC = () => {
     const toast = document.createElement('div');
     toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
     toast.innerHTML = `
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
       </svg>
       <span>${message}</span>
@@ -188,9 +188,15 @@ const BatchTracker: React.FC = () => {
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {event.data?.purity >= 95 && event.data?.pesticideLevel <= 0.1 ? 'PASSED' : 'SUCCESSFUL'}
+                  {event.data?.purity >= 95 && event.data?.pesticideLevel <= 0.1 ? 'PASSED' : 'ATTENTION REQUIRED'}
                 </span>
               </div>
+              {event.data?.location?.latitude && (
+                <div className="col-span-2">
+                  <span className="font-medium text-blue-700">GPS Coordinates:</span> 
+                  <span className="text-blue-900 font-mono text-xs"> {parseFloat(event.data.location.latitude).toFixed(6)}, {parseFloat(event.data.location.longitude).toFixed(6)}</span>
+                </div>
+              )}
               {event.data?.customParameters && event.data.customParameters.length > 0 && (
                 <div className="col-span-2">
                   <span className="font-medium text-blue-700">Additional Parameters:</span>
@@ -225,6 +231,12 @@ const BatchTracker: React.FC = () => {
                 <div><span className="font-medium text-purple-700">Yield Efficiency:</span> <span className="text-purple-900">{event.data.yieldPercentage.toFixed(2)}%</span></div>
               )}
               <div className="col-span-2"><span className="font-medium text-purple-700">Processing Location:</span> <span className="text-purple-900">{event.data?.location?.zone || 'Processing Facility'}</span></div>
+              {event.data?.location?.latitude && (
+                <div className="col-span-2">
+                  <span className="font-medium text-purple-700">GPS Coordinates:</span> 
+                  <span className="text-purple-900 font-mono text-xs"> {parseFloat(event.data.location.latitude).toFixed(6)}, {parseFloat(event.data.location.longitude).toFixed(6)}</span>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -249,6 +261,12 @@ const BatchTracker: React.FC = () => {
                 <div><span className="font-medium text-orange-700">Certification ID:</span> <span className="text-orange-900">{event.data.certificationId}</span></div>
               )}
               <div className="col-span-2"><span className="font-medium text-orange-700">Manufacturing Location:</span> <span className="text-orange-900">{event.data?.manufacturingLocation?.zone || 'Manufacturing Plant'}</span></div>
+              {event.data?.location?.latitude && (
+                <div className="col-span-2">
+                  <span className="font-medium text-orange-700">GPS Coordinates:</span> 
+                  <span className="text-orange-900 font-mono text-xs"> {parseFloat(event.data.location.latitude).toFixed(6)}, {parseFloat(event.data.location.longitude).toFixed(6)}</span>
+                </div>
+              )}
             </div>
           </div>
         );
