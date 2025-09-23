@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, Send, MessageSquare, TrendingUp } from 'lucide-react';
 
 const PlatformRating: React.FC = () => {
@@ -6,6 +6,28 @@ const PlatformRating: React.FC = () => {
   const [feedback, setFeedback] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [hoveredStar, setHoveredStar] = useState(0);
+  const [stats, setStats] = useState({
+    totalReviews: 0,
+    averageRating: 0,
+    satisfactionRate: 0
+  });
+
+  useEffect(() => {
+    loadPlatformStats();
+  }, []);
+
+  const loadPlatformStats = () => {
+    // Load from localStorage or initialize to 0
+    const totalReviews = parseInt(localStorage.getItem('platform_total_reviews') || '0');
+    const totalRating = parseFloat(localStorage.getItem('platform_total_rating') || '0');
+    const satisfactionRate = parseFloat(localStorage.getItem('platform_satisfaction_rate') || '0');
+    
+    setStats({
+      totalReviews,
+      averageRating: totalReviews > 0 ? totalRating / totalReviews : 0,
+      satisfactionRate
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -13,7 +35,15 @@ const PlatformRating: React.FC = () => {
     // Simulate submission
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Store in localStorage for demo
+    // Get current stats
+    const currentTotalReviews = parseInt(localStorage.getItem('platform_total_reviews') || '0');
+    const currentTotalRating = parseFloat(localStorage.getItem('platform_total_rating') || '0');
+    
+    // Update stats
+    const newTotalReviews = currentTotalReviews + 1;
+    const newTotalRating = currentTotalRating + rating;
+    
+    // Calculate satisfaction rate (ratings 4 and 5 are considered satisfied)
     const existingRatings = JSON.parse(localStorage.getItem('platformRatings') || '[]');
     existingRatings.push({
       rating,
@@ -21,7 +51,22 @@ const PlatformRating: React.FC = () => {
       timestamp: new Date().toISOString(),
       id: Math.random().toString(36).substr(2, 9)
     });
+    
+    const satisfiedRatings = existingRatings.filter((r: any) => r.rating >= 4).length;
+    const newSatisfactionRate = (satisfiedRatings / newTotalReviews) * 100;
+    
+    // Store updated stats
+    localStorage.setItem('platform_total_reviews', newTotalReviews.toString());
+    localStorage.setItem('platform_total_rating', newTotalRating.toString());
+    localStorage.setItem('platform_satisfaction_rate', newSatisfactionRate.toString());
     localStorage.setItem('platformRatings', JSON.stringify(existingRatings));
+    
+    // Update local state
+    setStats({
+      totalReviews: newTotalReviews,
+      averageRating: newTotalRating / newTotalReviews,
+      satisfactionRate: newSatisfactionRate
+    });
     
     setSubmitted(true);
   };
@@ -30,6 +75,7 @@ const PlatformRating: React.FC = () => {
     setRating(0);
     setFeedback('');
     setSubmitted(false);
+    loadPlatformStats(); // Reload stats to show updated values
   };
 
   if (submitted) {
@@ -41,6 +87,26 @@ const PlatformRating: React.FC = () => {
           </div>
           <h2 className="text-2xl font-bold text-green-800 mb-2">Thank You!</h2>
           <p className="text-green-600 mb-6">Your feedback has been submitted successfully</p>
+          
+          {/* Show updated stats */}
+          <div className="bg-green-50 rounded-lg p-4 mb-6">
+            <h3 className="font-semibold text-green-800 mb-2">Updated Platform Statistics</h3>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="text-2xl font-bold text-green-800">{stats.averageRating.toFixed(1)}</div>
+                <div className="text-green-600">Average Rating</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-800">{stats.totalReviews}</div>
+                <div className="text-green-600">Total Reviews</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-800">{stats.satisfactionRate.toFixed(0)}%</div>
+                <div className="text-green-600">Satisfaction Rate</div>
+              </div>
+            </div>
+          </div>
+          
           <button
             onClick={handleReset}
             className="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-6 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200"
@@ -134,26 +200,33 @@ const PlatformRating: React.FC = () => {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-800">4.8</div>
+              <div className="text-2xl font-bold text-green-800">{stats.averageRating.toFixed(1)}</div>
               <div className="text-sm text-green-600">Average Rating</div>
               <div className="flex justify-center mt-2">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
-                    className={`h-4 w-4 ${star <= 4 ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                    className={`h-4 w-4 ${star <= Math.round(stats.averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
                   />
                 ))}
               </div>
             </div>
             <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-800">1,247</div>
+              <div className="text-2xl font-bold text-blue-800">{stats.totalReviews}</div>
               <div className="text-sm text-blue-600">Total Reviews</div>
             </div>
             <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-800">98%</div>
+              <div className="text-2xl font-bold text-purple-800">{stats.satisfactionRate.toFixed(0)}%</div>
               <div className="text-sm text-purple-600">Satisfaction Rate</div>
+              <div className="text-xs text-purple-500 mt-1">Ratings 4+ considered satisfied</div>
             </div>
           </div>
+          
+          {stats.totalReviews === 0 && (
+            <div className="text-center mt-4 p-4 bg-gray-50 rounded-lg">
+              <p className="text-gray-600 text-sm">Be the first to rate our platform!</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
