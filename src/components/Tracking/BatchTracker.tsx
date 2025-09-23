@@ -144,7 +144,7 @@ const BatchTracker: React.FC = () => {
               <div><span className="font-medium text-green-700">Quality Grade:</span> <span className="text-green-900">{event.data?.qualityGrade}</span></div>
               <div><span className="font-medium text-green-700">Harvest Date:</span> <span className="text-green-900">{new Date(event.timestamp).toLocaleDateString()}</span></div>
               <div className="col-span-2"><span className="font-medium text-green-700">Zone:</span> <span className="text-green-900">{event.data?.location?.zone}</span></div>
-              {event.data?.location?.latitude && (
+              {event.data?.location?.latitude && event.data?.location?.longitude && (
                 <div className="col-span-2">
                   <span className="font-medium text-green-700">GPS Coordinates:</span> 
                   <span className="text-green-900 font-mono text-xs"> {parseFloat(event.data.location.latitude).toFixed(6)}, {parseFloat(event.data.location.longitude).toFixed(6)}</span>
@@ -181,6 +181,12 @@ const BatchTracker: React.FC = () => {
               <div><span className="font-medium text-blue-700">Purity:</span> <span className="text-blue-900">{event.data?.purity}%</span></div>
               <div><span className="font-medium text-blue-700">Pesticide Level:</span> <span className="text-blue-900">{event.data?.pesticideLevel} ppm</span></div>
               <div><span className="font-medium text-blue-700">Test Method:</span> <span className="text-blue-900">{event.data?.testMethod || 'Standard Laboratory Test'}</span></div>
+              {event.data?.location?.latitude && event.data?.location?.longitude && (
+                <div className="col-span-2">
+                  <span className="font-medium text-blue-700">GPS Coordinates:</span> 
+                  <span className="text-blue-900 font-mono text-xs"> {parseFloat(event.data.location.latitude).toFixed(6)}, {parseFloat(event.data.location.longitude).toFixed(6)}</span>
+                </div>
+              )}
               <div className="col-span-2">
                 <span className="font-medium text-blue-700">Test Status:</span> 
                 <span className={`ml-2 px-2 py-1 rounded-full text-xs font-bold ${
@@ -191,12 +197,6 @@ const BatchTracker: React.FC = () => {
                   {event.data?.purity >= 95 && event.data?.pesticideLevel <= 0.1 ? 'PASSED' : 'ATTENTION REQUIRED'}
                 </span>
               </div>
-              {event.data?.location?.latitude && (
-                <div className="col-span-2">
-                  <span className="font-medium text-blue-700">GPS Coordinates:</span> 
-                  <span className="text-blue-900 font-mono text-xs"> {parseFloat(event.data.location.latitude).toFixed(6)}, {parseFloat(event.data.location.longitude).toFixed(6)}</span>
-                </div>
-              )}
               {event.data?.customParameters && event.data.customParameters.length > 0 && (
                 <div className="col-span-2">
                   <span className="font-medium text-blue-700">Additional Parameters:</span>
@@ -231,7 +231,7 @@ const BatchTracker: React.FC = () => {
                 <div><span className="font-medium text-purple-700">Yield Efficiency:</span> <span className="text-purple-900">{event.data.yieldPercentage.toFixed(2)}%</span></div>
               )}
               <div className="col-span-2"><span className="font-medium text-purple-700">Processing Location:</span> <span className="text-purple-900">{event.data?.location?.zone || 'Processing Facility'}</span></div>
-              {event.data?.location?.latitude && (
+              {event.data?.location?.latitude && event.data?.location?.longitude && (
                 <div className="col-span-2">
                   <span className="font-medium text-purple-700">GPS Coordinates:</span> 
                   <span className="text-purple-900 font-mono text-xs"> {parseFloat(event.data.location.latitude).toFixed(6)}, {parseFloat(event.data.location.longitude).toFixed(6)}</span>
@@ -261,7 +261,7 @@ const BatchTracker: React.FC = () => {
                 <div><span className="font-medium text-orange-700">Certification ID:</span> <span className="text-orange-900">{event.data.certificationId}</span></div>
               )}
               <div className="col-span-2"><span className="font-medium text-orange-700">Manufacturing Location:</span> <span className="text-orange-900">{event.data?.manufacturingLocation?.zone || 'Manufacturing Plant'}</span></div>
-              {event.data?.location?.latitude && (
+              {event.data?.location?.latitude && event.data?.location?.longitude && (
                 <div className="col-span-2">
                   <span className="font-medium text-orange-700">GPS Coordinates:</span> 
                   <span className="text-orange-900 font-mono text-xs"> {parseFloat(event.data.location.latitude).toFixed(6)}, {parseFloat(event.data.location.longitude).toFixed(6)}</span>
