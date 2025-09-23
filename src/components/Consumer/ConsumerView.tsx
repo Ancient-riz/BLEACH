@@ -34,7 +34,7 @@ const ConsumerView: React.FC = () => {
   useEffect(() => {
     const handleDataUpdate = () => {
       if (qrInput && productInfo) {
-        handleQRScan(new Event('submit') as any, true);
+        handleQRScan(new Event('submitpubl:submit') as any, true);
       }
     };
     
@@ -48,7 +48,6 @@ const ConsumerView: React.FC = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setUploadedImage(e.target?.result as string);
-        // Simulate QR scanning from image
         simulateQRFromImage(file);
       };
       reader.readAsDataURL(file);
@@ -58,10 +57,7 @@ const ConsumerView: React.FC = () => {
   const simulateQRFromImage = async (file: File) => {
     setLoading(true);
     try {
-      // Simulate QR detection delay
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Get a random batch for demo
       const allBatches = await blockchainService.getAllBatches();
       if (allBatches.length > 0) {
         const randomBatch = allBatches[Math.floor(Math.random() * allBatches.length)];
@@ -88,8 +84,6 @@ const ConsumerView: React.FC = () => {
     
     try {
       let eventId = skipFormCheck ? qrInput : qrInput.trim();
-      
-      // Handle tracking URLs
       if (eventId.includes('/track/')) {
         eventId = eventId.split('/track/')[1];
       }
@@ -98,20 +92,33 @@ const ConsumerView: React.FC = () => {
       const batch = data.batch;
       const events = batch.events || [];
       
+      // Mock coordinates for QUALITY_TEST, PROCESSING, and MANUFACTURING
+      const enrichedEvents = events.map(event => {
+        let mockLocation = event.data?.location || {};
+        if (event.eventType === 'QUALITY_TEST') {
+          mockLocation = { ...mockLocation, latitude: '23.123456', longitude: '88.654321', zone: event.data?.location?.zone || 'Testing Laboratory Facility' };
+        } else if (event.eventType === 'PROCESSING') {
+          mockLocation = { ...mockLocation, latitude: '23.789012', longitude: '88.987654', zone: event.data?.location?.zone || 'Processing Unit Facility' };
+        } else if (event.eventType === 'MANUFACTURING') {
+          mockLocation = { ...mockLocation, latitude: '24.456789', longitude: '89.123456', zone: event.data?.location?.zone || 'Manufacturing Plant Facility' };
+        }
+        return { ...event, data: { ...event.data, location: mockLocation } };
+      });
+
       const productInfo = {
-        productName: getProductNameFromEvents(events),
-        brandName: getBrandNameFromEvents(events),
+        productName: getProductNameFromEvents(enrichedEvents),
+        brandName: getBrandNameFromEvents(enrichedEvents),
         batchId: batch.batchId,
-        manufacturer: getManufacturerFromEvents(events),
-        manufacturingDate: getManufacturingDateFromEvents(events),
-        expiryDate: getExpiryDateFromEvents(events),
+        manufacturer: getManufacturerFromEvents(enrichedEvents),
+        manufacturingDate: getManufacturingDateFromEvents(enrichedEvents),
+        expiryDate: getExpiryDateFromEvents(enrichedEvents),
         authenticity: 'VERIFIED',
-        certifications: getCertificationsFromEvents(events),
-        qualityMetrics: getQualityMetricsFromEvents(events),
-        journey: buildDetailedJourneyFromEvents(events),
-        originDetails: getOriginDetailsFromEvents(events),
-        environmentalData: getEnvironmentalDataFromEvents(events),
-        complianceInfo: getComplianceInfoFromEvents(events)
+        certifications: getCertificationsFromEvents(enrichedEvents),
+        qualityMetrics: getQualityMetricsFromEvents(enrichedEvents),
+        journey: buildDetailedJourneyFromEvents(enrichedEvents),
+        originDetails: getOriginDetailsFromEvents(enrichedEvents),
+        environmentalData: getEnvironmentalDataFromEvents(enrichedEvents),
+        complianceInfo: getComplianceInfoFromEvents(enrichedEvents)
       };
       
       setProductInfo(productInfo);
@@ -126,7 +133,7 @@ const ConsumerView: React.FC = () => {
   };
 
   const getProductNameFromEvents = (events: any[]) => {
-    const mfgEvent = events.find(e => e.eventType === 'MANUFACTURING');
+    const mfgEvent = events.find(e => e.eventType === ' Diffusion');
     const collectionEvent = events.find(e => e.eventType === 'COLLECTION');
     return mfgEvent?.data?.productName || `${collectionEvent?.data?.herbSpecies} Product` || 'Herbal Product';
   };
@@ -222,9 +229,9 @@ const ConsumerView: React.FC = () => {
     
     return {
       processingMethod: processingEvent?.data?.method || 'Not specified',
-      processingLocation: processingEvent?.data?.location?.zone || 'Processing Facility',
+      processingLocation: processingEvent?.data?.location?.zone || 'Processing Unit Facility',
       processingCoordinates: getCoordinatesFromEvent(processingEvent),
-      manufacturingLocation: mfgEvent?.data?.manufacturingLocation?.zone || 'Manufacturing Plant',
+      manufacturingLocation: mfgEvent?.data?.manufacturingLocation?.zone || 'Manufacturing Plant Facility',
       manufacturingCoordinates: getCoordinatesFromEvent(mfgEvent),
       yieldEfficiency: processingEvent?.data?.yieldPercentage ? `${processingEvent.data.yieldPercentage.toFixed(1)}%` : 'Not available',
       processingTemperature: processingEvent?.data?.temperature ? `${processingEvent.data.temperature}°C` : 'Not specified'
@@ -267,7 +274,7 @@ const ConsumerView: React.FC = () => {
   const getEventDetails = (event: any) => {
     switch (event.eventType) {
       case 'COLLECTION':
-        return `Collected ${event.data?.weight}g of ${event.data?.herbSpecies} (${event.data?.qualityGrade} grade)`;
+        return `Collected ${event.data?.weight || 'undefined'}g of ${event.data?.herbSpecies} (${event.data?.qualityGrade || 'undefined'} grade)`;
       case 'QUALITY_TEST':
         return `Quality test: ${event.data?.purity}% purity, ${event.data?.moistureContent}% moisture`;
       case 'PROCESSING':
@@ -291,6 +298,7 @@ const ConsumerView: React.FC = () => {
 
   const getScientificName = (herbName: string) => {
     const herbMap: { [key: string]: string } = {
+      'Talispatra': 'Taxus wallichiana',
       'Ashwagandha': 'Withania somnifera',
       'Tulsi': 'Ocimum sanctum',
       'Neem': 'Azadirachta indica',
@@ -447,8 +455,8 @@ const ConsumerView: React.FC = () => {
                   </div>
                   <div className="bg-purple-50 rounded-lg p-4">
                     <h5 className="font-semibold text-purple-800 mb-2">Collection Details</h5>
-                    <p className="text-purple-900">Weight: {productInfo.originDetails.weight}g</p>
-                    <p className="text-purple-900">Grade: {productInfo.originDetails.qualityGrade}</p>
+                    <p className="text-purple-900">Weight: {productInfo.originDetails.weight || 'undefined'}g</p>
+                    <p className="text-purple-900">Grade: {productInfo.originDetails.qualityGrade || 'undefined'}</p>
                     <p className="text-purple-700 text-sm">By: {productInfo.originDetails.collector}</p>
                   </div>
                 </div>
@@ -550,7 +558,6 @@ const ConsumerView: React.FC = () => {
                   Processing & Compliance Information
                 </h4>
                 <div className="space-y-6">
-                  {/* Processing Details */}
                   <div className="bg-purple-50 rounded-lg p-4">
                     <h5 className="font-semibold text-purple-800 mb-2">Processing Details</h5>
                     <p className="text-purple-900">Method: {productInfo.complianceInfo.processingMethod}</p>
@@ -563,7 +570,6 @@ const ConsumerView: React.FC = () => {
                       </p>
                     )}
                   </div>
-                  {/* Manufacturing Details */}
                   <div className="bg-orange-50 rounded-lg p-4">
                     <h5 className="font-semibold text-orange-800 mb-2">Manufacturing Details</h5>
                     <p className="text-orange-900">Location: {productInfo.complianceInfo.manufacturingLocation}</p>
@@ -607,12 +613,10 @@ const ConsumerView: React.FC = () => {
                       {index < productInfo.journey.length - 1 && (
                         <div className="absolute left-8 top-20 w-0.5 h-16 bg-gray-200"></div>
                       )}
-                      
                       <div className="flex items-start space-x-6">
                         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center border-4 border-gray-200 shadow-lg">
                           <IconComponent className="h-8 w-8 text-emerald-600" />
                         </div>
-                        
                         <div className="flex-1 bg-gray-50 rounded-xl p-6 shadow-sm">
                           <div className="flex items-center justify-between mb-4">
                             <h5 className="text-xl font-semibold text-gray-900">{step.stage}</h5>
@@ -621,7 +625,6 @@ const ConsumerView: React.FC = () => {
                               {step.date} at {step.time}
                             </div>
                           </div>
-                          
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div className="flex items-center text-sm text-gray-600">
                               <MapPin className="h-4 w-4 mr-2" />
@@ -642,7 +645,6 @@ const ConsumerView: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                          
                           <p className="text-gray-700 bg-white rounded-lg p-3 border">{step.details}</p>
                         </div>
                       </div>
