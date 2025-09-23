@@ -260,11 +260,14 @@ const BatchTracker: React.FC = () => {
               {event.data?.certificationId && (
                 <div><span className="font-medium text-orange-700">Certification ID:</span> <span className="text-orange-900">{event.data.certificationId}</span></div>
               )}
-              <div className="col-span-2"><span className="font-medium text-orange-700">Manufacturing Location:</span> <span className="text-orange-900">{event.data?.manufacturingLocation?.zone || 'Manufacturing Plant'}</span></div>
-              {event.data?.location?.latitude && event.data?.location?.longitude && (
+              <div className="col-span-2"><span className="font-medium text-orange-700">Manufacturing Location:</span> <span className="text-orange-900">{event.data?.manufacturingLocation?.zone || event.data?.location?.zone || 'Manufacturing Plant'}</span></div>
+              {(event.data?.location?.latitude && event.data?.location?.longitude) || (event.data?.manufacturingLocation?.latitude && event.data?.manufacturingLocation?.longitude) && (
                 <div className="col-span-2">
                   <span className="font-medium text-orange-700">GPS Coordinates:</span> 
-                  <span className="text-orange-900 font-mono text-xs"> {parseFloat(event.data.location.latitude).toFixed(6)}, {parseFloat(event.data.location.longitude).toFixed(6)}</span>
+                  <span className="text-orange-900 font-mono text-xs"> 
+                    {parseFloat((event.data?.location?.latitude || event.data?.manufacturingLocation?.latitude)).toFixed(6)}, 
+                    {parseFloat((event.data?.location?.longitude || event.data?.manufacturingLocation?.longitude)).toFixed(6)}
+                  </span>
                 </div>
               )}
             </div>
