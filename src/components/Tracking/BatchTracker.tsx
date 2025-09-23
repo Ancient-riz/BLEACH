@@ -184,7 +184,7 @@ const BatchTracker: React.FC = () => {
               <div className="col-span-2"><span className="font-medium text-blue-700">Test Location:</span> <span className="text-blue-900">{event.data?.testLocation?.zone || event.data?.location?.zone || 'Testing Facility'}</span></div>
               {(event.data?.location?.latitude && event.data?.location?.longitude) || (event.data?.testLocation?.latitude && event.data?.testLocation?.longitude) && (
                 <div className="col-span-2">
-                  <span className="font-medium text-blue-700">GPS Coordinates:</span> 
+                  <span className="font-medium text-green-700">GPS Coordinates:</span>  
                   <span className="text-blue-900 font-mono text-xs"> 
                     {parseFloat((event.data?.location?.latitude || event.data?.testLocation?.latitude)).toFixed(6)}, 
                     {parseFloat((event.data?.location?.longitude || event.data?.testLocation?.longitude)).toFixed(6)}
