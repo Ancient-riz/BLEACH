@@ -231,6 +231,20 @@ const ConsumerView: React.FC = () => {
     };
   };
 
+  const buildDetailedJourneyFromEvents = (events: any[]) => {
+    return events.map(event => ({
+      stage: event.eventType.replace('_', ' '),
+      location: getLocationFromEvent(event),
+      coordinates: getCoordinatesFromEvent(event),
+      date: new Date(event.timestamp).toLocaleDateString(),
+      time: new Date(event.timestamp).toLocaleTimeString(),
+      participant: event.participant,
+      organization: event.organization,
+      details: getEventDetails(event),
+      icon: getEventIcon(event.eventType)
+    }));
+  };
+
   const getLocationFromEvent = (event: any) => {
     if (!event?.data?.location) {
       return `${event?.organization || 'Unknown'} Facility`;
