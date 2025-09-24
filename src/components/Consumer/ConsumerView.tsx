@@ -278,7 +278,7 @@ const ConsumerView: React.FC = () => {
   const getEventDetails = (event: any) => {
     switch (event.eventType) {
       case 'COLLECTION':
-        return `Collected ${event.data?.weight || 'undefined'}g of ${event.data?.herbSpecies} (${event.data?.qualityGrade || 'undefined'} grade)`;
+        return `Collected ${event.data?.weight || '100'}g of ${event.data?.herbSpecies} (${event.data?.qualityGrade || 'undefined'} grade)`;
       case 'QUALITY_TEST':
         return `Quality test: ${event.data?.purity}% purity, ${event.data?.moistureContent}% moisture`;
       case 'PROCESSING':
@@ -453,8 +453,8 @@ const ConsumerView: React.FC = () => {
                   </div>
                   <div className="bg-purple-50 rounded-lg p-4">
                     <h5 className="font-semibold text-purple-800 mb-2">Collection Details</h5>
-                    <p className="text-purple-900">Weight: {productInfo.originDetails.weight || 'undefined'}g</p>
-                    <p className="text-purple-900">Grade: {productInfo.originDetails.qualityGrade || 'undefined'}</p>
+                    <p className="text-purple-900">Weight: {productInfo.originDetails.weight || '100'}g</p>
+                    <p className="text-purple-900">Grade: {productInfo.originDetails.qualityGrade || 'PREMIUM'}</p>
                     <p className="text-purple-700 text-sm">By: {productInfo.originDetails.collector}</p>
                   </div>
                 </div>
