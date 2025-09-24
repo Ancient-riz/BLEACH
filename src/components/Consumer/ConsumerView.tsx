@@ -278,7 +278,7 @@ const ConsumerView: React.FC = () => {
   const getEventDetails = (event: any) => {
     switch (event.eventType) {
       case 'COLLECTION':
-        return `Collected ${event.data?.weight || '100'} g of ${event.data?.herbSpecies} (${event.data?.qualityGrade || 'undefined'} grade)`;
+        return `Collected ${event.data?.weight || '100'} g of ${event.data?.herbSpecies} (${event.data?.qualityGrade || 'PREMIUM'} grade)`;
       case 'QUALITY_TEST':
         return `Quality test: ${event.data?.purity}% purity, ${event.data?.moistureContent}% moisture`;
       case 'PROCESSING':
